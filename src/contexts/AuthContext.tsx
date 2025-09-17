@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   isAdmin: boolean;
   loading: boolean;
+  adminLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   useEffect(() => {
     // Verificar sessão atual
@@ -33,10 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setAdminLoading(true);
         checkAdminStatus(session.user.id);
-      } else {
-        setLoading(false);
       }
+      // Autenticação carregada (independente do admin)
+      setLoading(false);
     });
 
     // Escutar mudanças de autenticação
@@ -46,9 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          setAdminLoading(true);
           await checkAdminStatus(session.user.id);
         } else {
           setIsAdmin(false);
+          setAdminLoading(false);
           setLoading(false);
         }
       }
@@ -70,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
     } finally {
-      setLoading(false);
+      setAdminLoading(false);
     }
   };
 
@@ -91,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     isAdmin,
     loading,
+    adminLoading,
     signIn,
     signOut,
   };

@@ -18,6 +18,10 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
+    // Em desenvolvimento não executa lógica de PWA/Service Worker
+    if (!import.meta.env.PROD) {
+      return;
+    }
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                        (window.navigator as any).standalone === true;
@@ -41,44 +45,25 @@ export const usePWA = () => {
     const handleOnline = () => setPwaState(prev => ({ ...prev, isOnline: true }));
     const handleOffline = () => setPwaState(prev => ({ ...prev, isOnline: false }));
 
-    // Service Worker: apenas em produção. Em desenvolvimento, desregistra e limpa caches
+    // Service Worker: apenas em produção
     if ('serviceWorker' in navigator) {
-      if (import.meta.env.PROD) {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('SW registered: ', registration);
-            // Check for updates
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    setPwaState(prev => ({ ...prev, updateAvailable: true }));
-                  }
-                });
-              }
-            });
-          })
-          .catch((registrationError) => {
-            console.log('SW registration failed: ', registrationError);
-          });
-      } else {
-        // DEV: garantir que nenhum SW/caches antigos interfiram
-        navigator.serviceWorker.getRegistrations().then(async (regs) => {
-          let hadRegistrations = false;
-          regs.forEach((r) => { hadRegistrations = true; r.unregister(); });
-
-          if (window.caches) {
-            const keys = await caches.keys();
-            await Promise.all(keys.map((k) => caches.delete(k)));
-            if ((hadRegistrations || keys.length > 0) && !sessionStorage.getItem('sw-cleared-once')) {
-              sessionStorage.setItem('sw-cleared-once', '1');
-              // Recarrega uma única vez para garantir assets sem cache
-              window.location.reload();
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  setPwaState(prev => ({ ...prev, updateAvailable: true }));
+                }
+              });
             }
-          }
+          });
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
         });
-      }
     }
 
     // Add event listeners

@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -14,6 +15,7 @@ import { ErrorBoundary } from './utils/error-monitoring';
 function App() {
   return (
     <ErrorBoundary>
+      <ThemeProvider>
       <AuthProvider>
         <Router>
           <Routes>
@@ -25,7 +27,8 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/petitions" element={<PetitionList />} />
                     <Route path="/petitions/new" element={<CreatePetition />} />
                     <Route path="/petitions/:id" element={<PetitionDetail />} />
@@ -37,6 +40,7 @@ function App() {
           </Routes>
         </Router>
       </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

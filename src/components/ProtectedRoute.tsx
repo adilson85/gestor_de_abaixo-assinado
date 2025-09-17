@@ -7,9 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, adminLoading, signOut } = useAuth();
+  const [signingOut, setSigningOut] = React.useState(false);
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -22,18 +23,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAdmin) {
+    if (!signingOut) {
+      setSigningOut(true);
+      Promise.resolve(signOut()).finally(() => {
+        window.location.href = '/login';
+      });
+    }
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Acesso Negado</h1>
-          <p className="text-gray-600 mb-4">Você não tem permissão para acessar este sistema.</p>
-          <button
-            onClick={() => window.location.href = '/login'}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Voltar ao Login
-          </button>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }

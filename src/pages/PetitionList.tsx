@@ -69,7 +69,7 @@ export const PetitionList: React.FC = () => {
       <select
         value={locationFilter}
         onChange={(e) => setLocationFilter(e.target.value)}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
       >
         <option value="">Todos os locais</option>
         {uniqueLocations.map(location => (
@@ -80,12 +80,12 @@ export const PetitionList: React.FC = () => {
   );
 
   return (
-    <div>
+    <div className="dark:text-gray-100">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Abaixo-Assinados</h1>
-            <p className="text-gray-600 mt-1">Gerencie todos os abaixo-assinados coletados fisicamente</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Abaixo-Assinados</h1>
+            <p className="text-gray-600 mt-1 dark:text-gray-300">Gerencie todos os abaixo-assinados coletados fisicamente</p>
           </div>
           <Link
             to="/petitions/new"
@@ -104,7 +104,7 @@ export const PetitionList: React.FC = () => {
         placeholder="Buscar por nome do abaixo-assinado..."
       />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
         {paginatedPetitions.length === 0 ? (
           <div className="p-8 text-center">
             <div className="text-gray-400 mb-4">
@@ -133,10 +133,10 @@ export const PetitionList: React.FC = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
                       Nome
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -153,38 +153,38 @@ export const PetitionList: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                   {paginatedPetitions.map((petition) => (
                     <tr 
                       key={petition.id} 
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="hover:bg-gray-50 cursor-pointer transition-colors dark:hover:bg-gray-700"
                       onClick={() => handleRowClick(petition.id)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {petition.name}
                           </div>
                           {petition.responsible && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 dark:text-gray-300">
                               Responsável: {petition.responsible}
                             </div>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           {petition.location || 'Não informado'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900">
+                        <div className="flex items-center text-sm text-gray-900 dark:text-white">
                           <Users size={16} className="mr-1" />
                           {signatureCounts[petition.id] || 0}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900">
+                        <div className="flex items-center text-sm text-gray-900 dark:text-white">
                           <Calendar size={16} className="mr-1" />
                           {petition.collectionDate 
                             ? petition.collectionDate.toLocaleDateString('pt-BR')
@@ -199,7 +199,7 @@ export const PetitionList: React.FC = () => {
                         >
                           <Link
                             to={`/petitions/${petition.id}`}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                             title="Ver detalhes"
                           >
                             <Eye size={16} />

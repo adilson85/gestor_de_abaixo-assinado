@@ -62,21 +62,21 @@ export const Settings: React.FC = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-        <p className="text-gray-600 mt-1">Gerencie as configurações do sistema</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações</h1>
+        <p className="text-gray-600 mt-1 dark:text-gray-300">Gerencie as configurações do sistema</p>
       </div>
 
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <Database size={24} className="text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Gerenciar Dados</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Gerenciar Dados</h2>
           </div>
           
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-gray-900 mb-2">Backup dos Dados</h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <h3 className="font-medium text-gray-900 mb-2 dark:text-white">Backup dos Dados</h3>
+              <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
                 Faça o download de todos os dados (abaixo-assinados e assinaturas) em formato JSON.
               </p>
               <button
@@ -88,11 +88,11 @@ export const Settings: React.FC = () => {
               </button>
             </div>
 
-            <hr className="border-gray-200" />
+            <hr className="border-gray-200 dark:border-gray-700" />
 
             <div>
-              <h3 className="font-medium text-gray-900 mb-2">Importar Dados</h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <h3 className="font-medium text-gray-900 mb-2 dark:text-white">Importar Dados</h3>
+              <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
                 Importe dados de um backup anterior. Isso substituirá todos os dados atuais.
               </p>
               <button
@@ -104,11 +104,11 @@ export const Settings: React.FC = () => {
               </button>
             </div>
 
-            <hr className="border-gray-200" />
+            <hr className="border-gray-200 dark:border-gray-700" />
 
             <div>
-              <h3 className="font-medium text-gray-900 mb-2">Limpar Dados</h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <h3 className="font-medium text-gray-900 mb-2 dark:text-white">Limpar Dados</h3>
+              <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
                 Remove todos os dados do sistema. Esta ação não pode ser desfeita.
               </p>
               <button
@@ -121,13 +121,13 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
-            <SettingsIcon size={24} className="text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Sobre o Sistema</h2>
+            <SettingsIcon size={24} className="text-gray-600 dark:text-gray-300" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sobre o Sistema</h2>
           </div>
           
-          <div className="space-y-2 text-sm text-gray-600">
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p><strong>Nome:</strong> Gestão de Abaixo-Assinados</p>
             <p><strong>Versão:</strong> 1.0.0</p>
             <p><strong>Desenvolvido para:</strong> Digitalização de abaixo-assinados físicos</p>
