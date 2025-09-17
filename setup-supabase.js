@@ -9,9 +9,14 @@ const __dirname = path.dirname(__filename);
 
 console.log('🚀 Configurando Supabase para o Gestor de Abaixo-Assinado...\n');
 
-// Credenciais fornecidas
-const supabaseUrl = 'https://rncowiwstzumxruaojvq.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY293aXdzdHp1bXhydWFvanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MjQ3NDMsImV4cCI6MjA3MzQwMDc0M30.rcU3UBq4MkAG22oW_tbwmasqAHTqxwrcoN1jiPTgDA8';
+// Lê variáveis de ambiente (nunca comitar credenciais)
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('⚠️  VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY não definidos no ambiente.');
+  console.warn('    Defina as variáveis no seu shell ou crie um .env.local manualmente.');
+}
 
 // Conteúdo do arquivo .env.local
 const envContent = `# Configurações do Supabase
@@ -42,10 +47,10 @@ try {
   console.log('4. Execute: npm run dev');
   
   console.log('\n🔗 Links úteis:');
-  console.log(`- Painel Supabase: ${supabaseUrl}`);
-  console.log('- SQL Editor: https://rncowiwstzumxruaojvq.supabase.co/project/default/sql');
-  console.log('- Storage: https://rncowiwstzumxruaojvq.supabase.co/project/default/storage');
-  console.log('- Auth: https://rncowiwstzumxruaojvq.supabase.co/project/default/auth');
+  console.log(`- Painel Supabase: ${supabaseUrl || 'https://app.supabase.com/'}`);
+  console.log('- SQL Editor: disponível no painel do seu projeto');
+  console.log('- Storage: disponível no painel do seu projeto');
+  console.log('- Auth: disponível no painel do seu projeto');
 
   console.log('\n📁 Arquivos de migração:');
   console.log('- supabase/migrations/20250915132944_twilight_sea.sql');

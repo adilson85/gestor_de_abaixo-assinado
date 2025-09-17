@@ -8,7 +8,7 @@ O arquivo `.env.local` foi criado automaticamente com as credenciais fornecidas.
 
 ### 1. Executar Migrações no Supabase
 
-Acesse o [SQL Editor do Supabase](https://rncowiwstzumxruaojvq.supabase.co/project/default/sql) e execute as migrações na seguinte ordem:
+Acesse o [SQL Editor do Supabase](https://app.supabase.com/) no seu projeto e execute as migrações na seguinte ordem:
 
 #### Migração 1: Tabelas Principais
 ```sql
@@ -37,7 +37,7 @@ Acesse o [SQL Editor do Supabase](https://rncowiwstzumxruaojvq.supabase.co/proje
 
 ### 2. Configurar Storage
 
-1. Acesse [Storage no Supabase](https://rncowiwstzumxruaojvq.supabase.co/project/default/storage)
+1. Acesse [Storage no Supabase](https://app.supabase.com/) no seu projeto
 2. Clique em "New bucket"
 3. Configure:
    - **Nome**: `petition-images`
@@ -47,7 +47,7 @@ Acesse o [SQL Editor do Supabase](https://rncowiwstzumxruaojvq.supabase.co/proje
 
 ### 3. Criar Usuário Administrador
 
-1. Acesse [Authentication no Supabase](https://rncowiwstzumxruaojvq.supabase.co/project/default/auth)
+1. Acesse [Authentication no Supabase](https://app.supabase.com/) no seu projeto
 2. Clique em "Add user"
 3. Crie um usuário com email e senha
 4. Copie o UUID do usuário criado

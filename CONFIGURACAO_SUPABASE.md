@@ -1,25 +1,25 @@
 # Configuração do Supabase
 
-## Credenciais Fornecidas
+## Variáveis e Credenciais
 
-- **URL**: https://rncowiwstzumxruaojvq.supabase.co
-- **Chave Anônima**: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY293aXdzdHp1bXhydWFvanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MjQ3NDMsImV4cCI6MjA3MzQwMDc0M30.rcU3UBq4MkAG22oW_tbwmasqAHTqxwrcoN1jiPTgDA8
-- **Senha do Banco**: XDrkDMh?9-A2t@4
+- Não versionar credenciais neste repositório.
+- Configure um arquivo `.env.local` na raiz (não é commitado).
+- Use o exemplo em `.env.example` para preencher as variáveis necessárias.
 
 ## Passos para Configuração
 
 ### 1. Criar arquivo .env.local
 
-Crie um arquivo `.env.local` na raiz do projeto com o seguinte conteúdo:
+Crie um arquivo `.env.local` na raiz do projeto com o seguinte conteúdo (exemplo):
 
 ```env
-VITE_SUPABASE_URL=https://rncowiwstzumxruaojvq.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY293aXdzdHp1bXhydWFvanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MjQ3NDMsImV4cCI6MjA3MzQwMDc0M30.rcU3UBq4MkAG22oW_tbwmasqAHTqxwrcoN1jiPTgDA8
+VITE_SUPABASE_URL=https://<SEU_PROJETO>.supabase.co
+VITE_SUPABASE_ANON_KEY=<SUA_CHAVE_ANON>
 ```
 
 ### 2. Executar Migrações
 
-No painel do Supabase (https://rncowiwstzumxruaojvq.supabase.co), vá para SQL Editor e execute as seguintes migrações na ordem:
+No painel do Supabase (URL do seu projeto), vá para o SQL Editor e execute as seguintes migrações na ordem:
 
 1. **Tabelas principais** (`supabase/migrations/20250915132944_twilight_sea.sql`)
 2. **Tabela de administradores** (`supabase/migrations/20250917051108_broken_resonance.sql`)
