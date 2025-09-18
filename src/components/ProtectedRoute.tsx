@@ -7,12 +7,11 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isAdmin, loading, initialized, signOut } = useAuth();
-  const [signingOut, setSigningOut] = React.useState(false);
+  const { user, isAdmin, loading } = useAuth();
 
-  if (loading || !initialized) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -23,15 +22,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAdmin) {
-    if (!signingOut) {
-      setSigningOut(true);
-      Promise.resolve(signOut()).finally(() => {
-        window.location.href = '/login';
-      });
-    }
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Acesso Negado</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">Você não tem permissão para acessar este sistema.</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Voltar ao Login
+          </button>
+        </div>
       </div>
     );
   }

@@ -18,10 +18,8 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // Em desenvolvimento não executa lógica de PWA/Service Worker
-    if (!import.meta.env.PROD) {
-      return;
-    }
+    // PWA simplificado - funcionalidades offline removidas para evitar travamentos
+    return;
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                        (window.navigator as any).standalone === true;

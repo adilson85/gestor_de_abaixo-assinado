@@ -11,8 +11,7 @@ import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './utils/error-monitoring';
-import { useAuthGuard } from './hooks/useAuthGuard';
-import { useVisibilityGuard } from './hooks/useVisibilityGuard';
+// Guards removidos para simplificar e evitar travamentos
 
 function App() {
   return (
@@ -29,9 +28,6 @@ function App() {
 }
 
 function AppContent() {
-  useAuthGuard();
-  useVisibilityGuard();
-  
   return (
             <Routes>
               {/* Login route */}

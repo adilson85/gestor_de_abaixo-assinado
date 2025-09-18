@@ -13,7 +13,7 @@ import {
   Sun
 } from 'lucide-react';
 import clsx from 'clsx';
-import { PWANotifications } from './PWANotifications';
+// PWANotifications removido para evitar travamentos
 import { useTheme } from '../contexts/ThemeContext';
 
 interface LayoutProps {
@@ -39,7 +39,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <PWANotifications />
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
