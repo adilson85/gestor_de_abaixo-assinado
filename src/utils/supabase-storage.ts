@@ -71,6 +71,7 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
     table_name: tableName,
   };
 
+  console.log('Inserting petition data:', petitionData);
   const { data, error } = await supabase
     .from('petitions')
     .insert(petitionData)
@@ -79,20 +80,28 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   if (error) {
     console.error('Error creating petition:', error);
+    console.error('Full error details:', JSON.stringify(error, null, 2));
     return null;
   }
 
+  console.log('Petition created successfully:', data);
+
   // Criar tabela específica para as assinaturas
+  console.log('Creating signatures table:', tableName);
   const { error: tableError } = await supabase.rpc('create_signatures_table', {
     table_name: tableName
   });
 
   if (tableError) {
     console.error('Error creating signatures table:', tableError);
+    console.error('Table name:', tableName);
+    console.error('Full error details:', JSON.stringify(tableError, null, 2));
     // Tentar remover a petition se a tabela não foi criada
     await supabase.from('petitions').delete().eq('id', data.id);
     return null;
   }
+
+  console.log('Signatures table created successfully:', tableName);
 
   return {
     id: data.id,
