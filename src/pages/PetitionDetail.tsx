@@ -302,7 +302,7 @@ export const PetitionDetail: React.FC = () => {
   }
 
   if (!petition) {
-    return <div className="flex justify-center py-8">Abaixo-assinado não encontrado</div>;
+    return <div className="flex justify-center py-8 text-gray-900 dark:text-gray-100">Abaixo-assinado não encontrado</div>;
   }
 
   return (
@@ -310,7 +310,7 @@ export const PetitionDetail: React.FC = () => {
       <div className="mb-6">
         <button
           onClick={() => navigate('/petitions')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 mb-4"
         >
           <ArrowLeft size={20} />
           Voltar para lista
@@ -318,8 +318,8 @@ export const PetitionDetail: React.FC = () => {
         
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{petition.name}</h1>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{petition.name}</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-300">
               <span className="flex items-center gap-1">
                 <Users size={16} />
                 {signatures.length} assinaturas
@@ -329,7 +329,7 @@ export const PetitionDetail: React.FC = () => {
                 Cadastrado em {petition.createdAt.toLocaleDateString('pt-BR')}
               </span>
               {petition.location && (
-                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                   {petition.location}
                 </span>
               )}
@@ -346,7 +346,7 @@ export const PetitionDetail: React.FC = () => {
               <img
                 src={petition.imageUrl}
                 alt={petition.name}
-                className="w-32 h-24 object-cover rounded-lg border border-gray-200 shadow-sm"
+                className="w-32 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
               />
             </div>
           )}
@@ -354,7 +354,7 @@ export const PetitionDetail: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
             { key: 'signatures', label: 'Assinaturas', icon: Users },
@@ -368,8 +368,8 @@ export const PetitionDetail: React.FC = () => {
               onClick={() => setActiveTab(key as any)}
               className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === key
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <Icon size={16} />
@@ -383,7 +383,7 @@ export const PetitionDetail: React.FC = () => {
       {activeTab === 'signatures' && (
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Assinaturas ({signatures.length})</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assinaturas ({signatures.length})</h2>
             <button
               onClick={() => setShowAddSignature(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -394,23 +394,23 @@ export const PetitionDetail: React.FC = () => {
           </div>
 
           {/* Search and Filters */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Buscar por nome, telefone ou cidade..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
               <div className="flex gap-2">
                 <select
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Todas as cidades</option>
                   {uniqueCities.map(city => (
@@ -420,7 +420,7 @@ export const PetitionDetail: React.FC = () => {
                 <select
                   value={stateFilter}
                   onChange={(e) => setStateFilter(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Todos os UFs</option>
                   {uniqueStates.map(state => (
@@ -432,17 +432,17 @@ export const PetitionDetail: React.FC = () => {
           </div>
 
           {/* Signatures List */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             {paginatedSignatures.length === 0 ? (
               <div className="p-8 text-center">
-                <Users size={48} className="mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Users size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   {filteredSignatures.length === 0 && searchTerm 
                     ? 'Nenhum resultado encontrado' 
                     : 'Nenhuma assinatura digitalizada'
                   }
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
                   {filteredSignatures.length === 0 && searchTerm 
                     ? 'Tente ajustar os filtros de busca'
                     : 'Digite a primeira assinatura deste abaixo-assinado físico'
@@ -461,32 +461,32 @@ export const PetitionDetail: React.FC = () => {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Assinante
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Contato
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Localização
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Mensagem Enviada
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Data de Cadastro
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {paginatedSignatures.map((signature) => (
-                        <tr key={signature.id} className="hover:bg-gray-50">
+                        <tr key={signature.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <User size={16} className="text-gray-400 mr-2" />
+                              <User size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
                               {editingSignatureId === signature.id ? (
                                 <form
                                   onSubmit={async (e) => {
