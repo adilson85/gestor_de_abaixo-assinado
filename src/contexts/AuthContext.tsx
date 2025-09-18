@@ -1,14 +1,12 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { useAuthState } from '../hooks/useAuthState';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
   loading: boolean;
-  initialized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -24,7 +22,78 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, session, isAdmin, loading, initialized } = useAuthState();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAdmin = async (userId: string) => {
+      try {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+        
+        if (mounted) {
+          setIsAdmin(!!data);
+        }
+      } catch {
+        if (mounted) {
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            await checkAdmin(session.user.id);
+          }
+          
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth init error:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user && event !== 'SIGNED_OUT') {
+          await checkAdmin(session.user.id);
+        } else {
+          setIsAdmin(false);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -38,18 +107,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
-  const value = useMemo(() => ({
-    user,
-    session,
-    isAdmin,
-    loading,
-    initialized,
-    signIn,
-    signOut,
-  }), [user, session, isAdmin, loading, initialized]);
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user,
+      session,
+      isAdmin,
+      loading,
+      signIn,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );

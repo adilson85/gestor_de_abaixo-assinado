@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './components/SimpleAuthProvider';
-import { SimpleRouteGuard } from './components/SimpleRouteGuard';
+import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -18,13 +18,13 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <SimpleRouteGuard>
-              <Routes>
-                {/* Login route - public */}
-                <Route path="/login" element={<Login />} />
-                
-                {/* Protected application routes */}
-                <Route path="/*" element={
+            <Routes>
+              {/* Login route */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected application routes */}
+              <Route path="/*" element={
+                <ProtectedRoute>
                   <Layout>
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -35,9 +35,9 @@ function App() {
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </Layout>
-                } />
-              </Routes>
-            </SimpleRouteGuard>
+                </ProtectedRoute>
+              } />
+            </Routes>
           </Router>
         </AuthProvider>
       </ThemeProvider>
