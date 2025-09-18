@@ -626,8 +626,8 @@ export const PetitionDetail: React.FC = () => {
       {activeTab === 'reports' && (
         <div>
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Relatórios e Estatísticas</h2>
-            <p className="text-gray-600 mt-1">Análise detalhada das assinaturas coletadas</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Relatórios e Estatísticas</h2>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Análise detalhada das assinaturas coletadas</p>
           </div>
           
           <ReportsChart signatures={signatures} />
@@ -637,8 +637,8 @@ export const PetitionDetail: React.FC = () => {
       {activeTab === 'links' && petition && (
         <div>
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Links (YouTube / Google Drive)</h2>
-            <p className="text-gray-600 mt-1">Cadastre materiais relacionados ao tema.</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Links (YouTube / Google Drive)</h2>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Cadastre materiais relacionados ao tema.</p>
           </div>
 
           <form
@@ -656,15 +656,15 @@ export const PetitionDetail: React.FC = () => {
                 setNewResourceUrl('');
               }
             }}
-            className="bg-white border border-gray-200 rounded-lg p-4 mb-6"
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
                 <select
                   value={newResourceType}
                   onChange={(e) => setNewResourceType(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="link">Link</option>
                   <option value="youtube">YouTube</option>
@@ -672,23 +672,23 @@ export const PetitionDetail: React.FC = () => {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Título (opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título (opcional)</label>
                 <input
                   type="text"
                   value={newResourceTitle}
                   onChange={(e) => setNewResourceTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Ex.: Vídeo explicativo"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
                 <input
                   type="url"
                   required
                   value={newResourceUrl}
                   onChange={(e) => setNewResourceUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Cole a URL (YouTube ou Drive)"
                 />
               </div>
@@ -698,16 +698,16 @@ export const PetitionDetail: React.FC = () => {
             </div>
           </form>
 
-          <div className="bg-white border border-gray-200 rounded-lg">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
             {resources.length === 0 ? (
-              <div className="p-6 text-gray-600">Nenhum link cadastrado ainda.</div>
+              <div className="p-6 text-gray-600 dark:text-gray-300">Nenhum link cadastrado ainda.</div>
             ) : (
-              <ul className="divide-y divide-gray-200">
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                 {resources.map((r) => (
                   <li key={r.id} className="p-4 flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{r.title || r.type.toUpperCase()}</div>
-                      <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 text-sm break-all flex items-center gap-1">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.title || r.type.toUpperCase()}</div>
+                      <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 text-sm break-all flex items-center gap-1">
                         <ExternalLink size={14} /> {r.url}
                       </a>
                     </div>
@@ -716,7 +716,7 @@ export const PetitionDetail: React.FC = () => {
                         const ok = await deletePetitionResource(r.id);
                         if (ok) setResources((prev) => prev.filter((x) => x.id !== r.id));
                       }}
-                      className="text-sm text-gray-600 hover:text-red-600"
+                      className="text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400"
                     >
                       Remover
                     </button>
@@ -730,12 +730,12 @@ export const PetitionDetail: React.FC = () => {
 
       {activeTab === 'settings' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Informações Básicas</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Informações Básicas</h3>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 <Edit3 size={16} />
                 {isEditing ? 'Cancelar' : 'Editar'}
@@ -745,60 +745,60 @@ export const PetitionDetail: React.FC = () => {
             {isEditing ? (
               <form onSubmit={handleUpdatePetition} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome do Abaixo-Assinado
                   </label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Descrição
                   </label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Local da Coleta
                     </label>
                     <input
                       type="text"
                       value={editLocation}
                       onChange={(e) => setEditLocation(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Data da Coleta
                     </label>
                     <input
                       type="date"
                       value={editCollectionDate}
                       onChange={(e) => setEditCollectionDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Responsável pela Coleta
                   </label>
                   <input
                     type="text"
                     value={editResponsible}
                     onChange={(e) => setEditResponsible(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -811,7 +811,7 @@ export const PetitionDetail: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
                     Cancelar
                   </button>
@@ -820,31 +820,31 @@ export const PetitionDetail: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Nome</label>
-                  <p className="text-gray-900">{petition.name}</p>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome</label>
+                  <p className="text-gray-900 dark:text-gray-100">{petition.name}</p>
                 </div>
                 {petition.description && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Descrição</label>
-                    <p className="text-gray-900">{petition.description}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
+                    <p className="text-gray-900 dark:text-gray-100">{petition.description}</p>
                   </div>
                 )}
                 {petition.location && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Local da Coleta</label>
-                    <p className="text-gray-900">{petition.location}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Local da Coleta</label>
+                    <p className="text-gray-900 dark:text-gray-100">{petition.location}</p>
                   </div>
                 )}
                 {petition.collectionDate && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Data da Coleta</label>
-                    <p className="text-gray-900">{petition.collectionDate.toLocaleDateString('pt-BR')}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data da Coleta</label>
+                    <p className="text-gray-900 dark:text-gray-100">{petition.collectionDate.toLocaleDateString('pt-BR')}</p>
                   </div>
                 )}
                 {petition.responsible && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Responsável</label>
-                    <p className="text-gray-900">{petition.responsible}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Responsável</label>
+                    <p className="text-gray-900 dark:text-gray-100">{petition.responsible}</p>
                   </div>
                 )}
               </div>
@@ -854,23 +854,23 @@ export const PetitionDetail: React.FC = () => {
       )}
 
       {activeTab === 'export' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Exportar Dados</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Exportar Dados</h3>
           
           <div className="space-y-4">
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Formato CSV</h4>
-              <p className="text-sm text-gray-600 mb-4">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Formato CSV</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Exporte todas as assinaturas digitalizadas em formato CSV para análise ou backup.
                 O arquivo incluirá: Nome, Telefone, Endereço, Mensagem Enviada e Data de Cadastro.
               </p>
               
-              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {signatures.length} assinaturas digitalizadas
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     Arquivo: assinaturas-{petition.slug}.csv
                   </p>
                 </div>
@@ -891,10 +891,10 @@ export const PetitionDetail: React.FC = () => {
       {/* Add Signature Modal */}
       {showAddSignature && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Digitalizar Assinatura</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Digitalizar Assinatura</h3>
                 <button
                   onClick={() => {
                     setShowAddSignature(false);
@@ -909,7 +909,7 @@ export const PetitionDetail: React.FC = () => {
                       zipCode: ''
                     });
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   ×
                 </button>
@@ -917,24 +917,24 @@ export const PetitionDetail: React.FC = () => {
 
               <form onSubmit={handleAddSignature} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Nome *
                   </label>
                   <input
                     type="text"
                     value={newSignature.name}
                     onChange={(e) => setNewSignature(prev => ({ ...prev, name: e.target.value }))}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      signatureErrors.name ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                      signatureErrors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   />
                   {signatureErrors.name && (
-                    <p className="text-red-600 text-sm mt-1">{signatureErrors.name}</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm mt-1">{signatureErrors.name}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Telefone WhatsApp *
                   </label>
                   <input
@@ -942,14 +942,14 @@ export const PetitionDetail: React.FC = () => {
                     value={newSignature.phone}
                     onChange={(e) => setNewSignature(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="(11) 99999-9999"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      signatureErrors.phone ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 ${
+                      signatureErrors.phone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   />
                   {signatureErrors.phone && (
-                    <p className="text-red-600 text-sm mt-1">{signatureErrors.phone}</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm mt-1">{signatureErrors.phone}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Formato: DDD + 9 + 8 dígitos (ex: 11987654321)
                   </p>
                 </div>
