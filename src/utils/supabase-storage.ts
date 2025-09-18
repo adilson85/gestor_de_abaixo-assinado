@@ -86,61 +86,65 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   console.log('Petition created successfully:', data);
 
-  // Criar tabela específica para as assinaturas usando SQL direto
+  // Criar tabela específica para as assinaturas
   console.log('Creating signatures table:', tableName);
   
-  // Usar exec() para executar SQL direto em vez da função RPC
-  const { error: tableError } = await supabase.rpc('exec', {
-    sql: `
-      CREATE TABLE IF NOT EXISTS ${tableName} (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        street TEXT,
-        neighborhood TEXT,
-        city TEXT,
-        state TEXT,
-        zip_code TEXT,
-        mensagem_enviada BOOLEAN DEFAULT false,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-      );
-      
-      -- Grant permissions
-      GRANT ALL ON TABLE ${tableName} TO authenticated;
-      GRANT ALL ON TABLE ${tableName} TO service_role;
-      
-      -- Enable RLS
-      ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;
-      
-      -- Create policies
-      CREATE POLICY IF NOT EXISTS "Users can view signatures" ON ${tableName}
-      FOR SELECT TO authenticated
-      USING (true);
-      
-      CREATE POLICY IF NOT EXISTS "Users can insert signatures" ON ${tableName}
-      FOR INSERT TO authenticated
-      WITH CHECK (true);
-      
-      CREATE POLICY IF NOT EXISTS "Users can update signatures" ON ${tableName}
-      FOR UPDATE TO authenticated
-      USING (true);
-      
-      CREATE POLICY IF NOT EXISTS "Users can delete signatures" ON ${tableName}
-      FOR DELETE TO authenticated
-      USING (true);
-    `
-  });
+  // SOLUÇÃO ALTERNATIVA: Usar uma tabela única para todas as assinaturas
+  // Em vez de criar tabelas dinâmicas, vamos usar uma tabela única com petition_id
+  console.log('Using unified signatures table approach...');
+  
+  // Verificar se a tabela signatures existe, se não, criar
+  const { error: checkTableError } = await supabase
+    .from('signatures')
+    .select('id')
+    .limit(1);
+  
+  if (checkTableError && checkTableError.code === 'PGRST116') {
+    // Tabela não existe, vamos criar via migração manual
+    console.log('Signatures table does not exist. Please run the migration manually.');
+    console.log('Execute this SQL in Supabase SQL Editor:');
+    console.log(`
+CREATE TABLE IF NOT EXISTS signatures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  petition_id UUID NOT NULL REFERENCES petitions(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  street TEXT,
+  neighborhood TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  mensagem_enviada BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
 
-  if (tableError) {
-    console.error('Error creating signatures table:', tableError);
-    console.error('Table name:', tableName);
-    console.error('Full error details:', JSON.stringify(tableError, null, 2));
+-- Grant permissions
+GRANT ALL ON TABLE signatures TO authenticated;
+GRANT ALL ON TABLE signatures TO service_role;
+
+-- Enable RLS
+ALTER TABLE signatures ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON signatures 
+FOR SELECT USING (true);
+
+CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON signatures 
+FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON signatures 
+FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY IF NOT EXISTS "Enable delete for authenticated users" ON signatures 
+FOR DELETE USING (auth.role() = 'authenticated');
+    `);
+    
     // Tentar remover a petition se a tabela não foi criada
     await supabase.from('petitions').delete().eq('id', data.id);
     return null;
   }
 
-  console.log('Signatures table created successfully:', tableName);
+  console.log('Signatures table exists, proceeding...');
 
   return {
     id: data.id,
@@ -224,10 +228,11 @@ export const deletePetition = async (id: string): Promise<boolean> => {
 };
 
 // Signatures
-export const getSignaturesByPetition = async (tableName: string): Promise<Signature[]> => {
+export const getSignaturesByPetition = async (petitionId: string): Promise<Signature[]> => {
   const { data, error } = await supabase
-    .from(tableName)
+    .from('signatures')
     .select('*')
+    .eq('petition_id', petitionId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -249,8 +254,9 @@ export const getSignaturesByPetition = async (tableName: string): Promise<Signat
   }));
 };
 
-export const saveSignature = async (tableName: string, signature: Omit<Signature, 'id' | 'createdAt'>): Promise<Signature | null> => {
+export const saveSignature = async (petitionId: string, signature: Omit<Signature, 'id' | 'createdAt'>): Promise<Signature | null> => {
   const signatureData = {
+    petition_id: petitionId,
     name: signature.name,
     phone: signature.phone,
     street: signature.street || null,
@@ -262,7 +268,7 @@ export const saveSignature = async (tableName: string, signature: Omit<Signature
   };
 
   const { data, error } = await supabase
-    .from(tableName)
+    .from('signatures')
     .insert(signatureData)
     .select()
     .single();
@@ -286,10 +292,11 @@ export const saveSignature = async (tableName: string, signature: Omit<Signature
   };
 };
 
-export const checkPhoneDuplicate = async (tableName: string, phone: string, excludeId?: string): Promise<boolean> => {
+export const checkPhoneDuplicate = async (petitionId: string, phone: string, excludeId?: string): Promise<boolean> => {
   let query = supabase
-    .from(tableName)
+    .from('signatures')
     .select('id')
+    .eq('petition_id', petitionId)
     .eq('phone', phone);
 
   if (excludeId) {
@@ -306,10 +313,11 @@ export const checkPhoneDuplicate = async (tableName: string, phone: string, excl
   return data && data.length > 0;
 };
 
-export const getSignatureCount = async (tableName: string): Promise<number> => {
+export const getSignatureCount = async (petitionId: string): Promise<number> => {
   const { count, error } = await supabase
-    .from(tableName)
-    .select('*', { count: 'exact', head: true });
+    .from('signatures')
+    .select('*', { count: 'exact', head: true })
+    .eq('petition_id', petitionId);
 
   if (error) {
     console.error('Error getting signature count:', error);
@@ -319,9 +327,9 @@ export const getSignatureCount = async (tableName: string): Promise<number> => {
   return count || 0;
 };
 
-export const updateSignatureMessageStatus = async (tableName: string, signatureId: string, mensagemEnviada: boolean): Promise<boolean> => {
+export const updateSignatureMessageStatus = async (signatureId: string, mensagemEnviada: boolean): Promise<boolean> => {
   const { error } = await supabase
-    .from(tableName)
+    .from('signatures')
     .update({ mensagem_enviada: mensagemEnviada })
     .eq('id', signatureId);
 
@@ -334,7 +342,6 @@ export const updateSignatureMessageStatus = async (tableName: string, signatureI
 };
 
 export const updateSignature = async (
-  tableName: string,
   signatureId: string,
   updates: Partial<Pick<Signature, 'name' | 'phone' | 'street' | 'neighborhood' | 'city' | 'state' | 'zipCode' | 'mensagemEnviada'>>
 ): Promise<Signature | null> => {
@@ -349,7 +356,7 @@ export const updateSignature = async (
   if (typeof updates.mensagemEnviada !== 'undefined') payload.mensagem_enviada = updates.mensagemEnviada;
 
   const { data, error } = await supabase
-    .from(tableName)
+    .from('signatures')
     .update(payload)
     .eq('id', signatureId)
     .select()
