@@ -71,27 +71,27 @@ export const CreatePetition: React.FC = () => {
       <div className="mb-6">
         <button
           onClick={() => navigate('/petitions')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 dark:text-gray-300 dark:hover:text-white"
         >
           <ArrowLeft size={20} />
           Voltar para lista
         </button>
         
-        <h1 className="text-2xl font-bold text-gray-900">Criar Abaixo-Assinado</h1>
-        <p className="text-gray-600 mt-1">Cadastre um abaixo-assinado coletado fisicamente</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Criar Abaixo-Assinado</h1>
+        <p className="text-gray-600 mt-1 dark:text-gray-300">Cadastre um abaixo-assinado coletado fisicamente</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             {errors.general && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600 text-sm">{errors.general}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 dark:bg-red-900/30 dark:border-red-700">
+                <p className="text-red-600 text-sm dark:text-red-300">{errors.general}</p>
               </div>
             )}
             
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                 Nome do Abaixo-Assinado *
               </label>
               <input
@@ -104,18 +104,18 @@ export const CreatePetition: React.FC = () => {
                     setErrors(prev => ({ ...prev, name: '' }));
                   }
                 }}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 ${
+                  errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 }`}
                 placeholder="Digite o nome do abaixo-assinado"
               />
               {errors.name && (
-                <p className="text-red-600 text-sm mt-1">{errors.name}</p>
+                <p className="text-red-600 text-sm mt-1 dark:text-red-300">{errors.name}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                 Descrição (Opcional)
               </label>
               <textarea
@@ -123,7 +123,7 @@ export const CreatePetition: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 dark:border-gray-600"
                 placeholder="Digite uma descrição para o abaixo-assinado"
               />
             </div>
@@ -132,7 +132,7 @@ export const CreatePetition: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                   Local da Coleta
                 </label>
                 <input
@@ -140,13 +140,13 @@ export const CreatePetition: React.FC = () => {
                   id="location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 dark:border-gray-600"
                   placeholder="Ex: Praça Central, Escola Municipal..."
                 />
               </div>
               
               <div>
-                <label htmlFor="collectionDate" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="collectionDate" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                   Data da Coleta
                 </label>
                 <input
@@ -154,13 +154,13 @@ export const CreatePetition: React.FC = () => {
                   id="collectionDate"
                   value={collectionDate}
                   onChange={(e) => setCollectionDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 dark:border-gray-600"
                 />
               </div>
             </div>
             
             <div>
-              <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
                 Responsável pela Coleta
               </label>
               <input
@@ -168,7 +168,7 @@ export const CreatePetition: React.FC = () => {
                 id="responsible"
                 value={responsible}
                 onChange={(e) => setResponsible(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 dark:border-gray-600"
                 placeholder="Nome do responsável pela coleta"
               />
             </div>

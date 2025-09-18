@@ -16,30 +16,30 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            {/* Login route */}
-            <Route path="/login" element={<Login />} />
-            
-            {/* Protected application routes */}
-            <Route path="/*" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/petitions" element={<PetitionList />} />
-                    <Route path="/petitions/new" element={<CreatePetition />} />
-                    <Route path="/petitions/:id" element={<PetitionDetail />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </Router>
-      </AuthProvider>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              {/* Login route */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected application routes */}
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/petitions" element={<PetitionList />} />
+                      <Route path="/petitions/new" element={<CreatePetition />} />
+                      <Route path="/petitions/:id" element={<PetitionDetail />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </Router>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
