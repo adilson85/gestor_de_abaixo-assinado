@@ -25,7 +25,7 @@ export const PetitionList: React.FC = () => {
         // Carregar contagem de assinaturas para cada petition
         const counts: { [key: string]: number } = {};
         for (const petition of allPetitions) {
-          counts[petition.id] = await getSignatureCount(petition.tableName);
+          counts[petition.id] = await getSignatureCount(petition.id);
         }
         setSignatureCounts(counts);
       } catch (error) {

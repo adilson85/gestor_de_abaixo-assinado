@@ -104,7 +104,7 @@ export const PetitionDetail: React.FC = () => {
         setEditCollectionDate(currentPetition.collectionDate ? currentPetition.collectionDate.toISOString().split('T')[0] : '');
         setEditResponsible(currentPetition.responsible || '');
         
-        const petitionSignatures = await getSignaturesByPetition(currentPetition.tableName);
+        const petitionSignatures = await getSignaturesByPetition(currentPetition.id);
         setSignatures(petitionSignatures);
 
         // Carregar links
@@ -483,7 +483,7 @@ export const PetitionDetail: React.FC = () => {
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {paginatedSignatures.map((signature) => (
-                        <tr key={signature.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <tr key={signature.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <User size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
@@ -524,7 +524,7 @@ export const PetitionDetail: React.FC = () => {
                                 </form>
                               ) : (
                                 <button
-                                  className="text-left text-sm font-medium text-gray-900 hover:underline"
+                                  className="text-left text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline"
                                   title="Clique para editar o nome"
                                   onClick={() => {
                                     setEditingSignatureId(signature.id);
@@ -537,24 +537,24 @@ export const PetitionDetail: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-900">
-                              <Phone size={16} className="text-gray-400 mr-2" />
+                            <div className="flex items-center text-sm text-gray-900 dark:text-gray-100">
+                              <Phone size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
                               {formatPhone(signature.phone)}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">
                               {signature.street && (
                                 <div>{signature.street}</div>
                               )}
                               <div className="flex items-center">
-                                <MapPin size={14} className="text-gray-400 mr-1" />
+                                <MapPin size={14} className="text-gray-400 dark:text-gray-500 mr-1" />
                                 {[signature.neighborhood, signature.city, signature.state]
                                   .filter(Boolean)
                                   .join(', ') || 'Não informado'}
                               </div>
                               {signature.zipCode && (
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
                                   CEP: {signature.zipCode.replace(/(\d{5})(\d{3})/, '$1-$2')}
                                 </div>
                               )}
@@ -601,7 +601,7 @@ export const PetitionDetail: React.FC = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                             {signature.createdAt.toLocaleDateString('pt-BR')}
                           </td>
                         </tr>

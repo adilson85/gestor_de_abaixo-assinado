@@ -19,7 +19,7 @@ export const Dashboard: React.FC = () => {
         // Contar assinaturas de todas as petitions
         let total = 0;
         for (const petition of allPetitions) {
-          const count = await getSignatureCount(petition.tableName);
+          const count = await getSignatureCount(petition.id);
           total += count;
         }
         setTotalSignatures(total);
