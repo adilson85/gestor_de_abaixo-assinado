@@ -38,6 +38,11 @@ export const PetitionList: React.FC = () => {
     loadData();
   }, []);
 
+  const filters = {
+    location: locationFilter,
+    onLocationChange: setLocationFilter,
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -47,7 +52,8 @@ export const PetitionList: React.FC = () => {
   }
 
   const filteredPetitions = petitions.filter(petition => {
-    const matchesSearch = petition.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = petition.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (petition.description && petition.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesLocation = !locationFilter || 
       (petition.location && petition.location.toLowerCase().includes(locationFilter.toLowerCase()));
     
@@ -57,27 +63,6 @@ export const PetitionList: React.FC = () => {
   const totalPages = Math.ceil(filteredPetitions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedPetitions = filteredPetitions.slice(startIndex, startIndex + itemsPerPage);
-
-  const uniqueLocations = Array.from(new Set(petitions.map(p => p.location).filter(Boolean))).sort();
-
-  const handleRowClick = (petitionId: string) => {
-    navigate(`/petitions/${petitionId}`);
-  };
-
-  const filters = (
-    <div className="flex gap-2">
-      <select
-        value={locationFilter}
-        onChange={(e) => setLocationFilter(e.target.value)}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-      >
-        <option value="">Todos os locais</option>
-        {uniqueLocations.map(location => (
-          <option key={location} value={location}>{location}</option>
-        ))}
-      </select>
-    </div>
-  );
 
   return (
     <div className="dark:text-gray-100">
@@ -109,13 +94,13 @@ export const PetitionList: React.FC = () => {
           <div className="p-8 text-center">
             <div className="text-gray-400 mb-4">
               {filteredPetitions.length === 0 && searchTerm ? (
-                <>
+                <div>
                   <Eye size={48} className="mx-auto mb-2" />
                   <h3 className="text-lg font-medium text-gray-900">Nenhum resultado encontrado</h3>
                   <p className="text-gray-600">Tente ajustar os filtros de busca</p>
-                </>
+                </div>
               ) : (
-                <>
+                <div>
                   <Plus size={48} className="mx-auto mb-2" />
                   <h3 className="text-lg font-medium text-gray-900">Nenhum abaixo-assinado cadastrado</h3>
                   <p className="text-gray-600 mb-4">Comece cadastrando seu primeiro abaixo-assinado coletado</p>
@@ -126,12 +111,12 @@ export const PetitionList: React.FC = () => {
                     <Plus size={20} />
                     Cadastrar Abaixo-Assinado
                   </Link>
-                </>
+                </div>
               )}
             </div>
           </div>
         ) : (
-          <>
+          <div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -143,10 +128,13 @@ export const PetitionList: React.FC = () => {
                       Local da Coleta
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data da Coleta
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Assinaturas
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data da Coleta
+                      Status
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
@@ -157,24 +145,31 @@ export const PetitionList: React.FC = () => {
                   {paginatedPetitions.map((petition) => (
                     <tr 
                       key={petition.id} 
-                      className="hover:bg-gray-50 cursor-pointer transition-colors dark:hover:bg-gray-700"
-                      onClick={() => handleRowClick(petition.id)}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => navigate(`/petitions/${petition.id}`)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {petition.name}
-                          </div>
-                          {petition.responsible && (
-                            <div className="text-xs text-gray-500 dark:text-gray-300">
-                              Responsável: {petition.responsible}
+                        <div className="flex items-center">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {petition.name}
                             </div>
-                          )}
+                            {petition.description && (
+                              <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                                {petition.description}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
-                          {petition.location || 'Não informado'}
+                          {petition.location || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {petition.collectionDate ? petition.collectionDate.toLocaleDateString('pt-BR') : '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -184,12 +179,10 @@ export const PetitionList: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-900 dark:text-white">
-                          <Calendar size={16} className="mr-1" />
-                          {petition.collectionDate 
-                            ? petition.collectionDate.toLocaleDateString('pt-BR')
-                            : petition.createdAt.toLocaleDateString('pt-BR')
-                          }
+                        <div className="flex items-center">
+                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900/30 dark:text-green-300">
+                            Ativo
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -219,8 +212,9 @@ export const PetitionList: React.FC = () => {
               totalItems={filteredPetitions.length}
               itemsPerPage={itemsPerPage}
             />
-          </>
+          </div>
         )}
+      </div>
     </div>
   );
 };
