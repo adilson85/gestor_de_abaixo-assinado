@@ -219,7 +219,6 @@ export const PetitionList: React.FC = () => {
               totalItems={filteredPetitions.length}
               itemsPerPage={itemsPerPage}
             />
-          </>
         )}
     </div>
   );
