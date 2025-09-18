@@ -327,6 +327,47 @@ export const getSignatureCount = async (petitionId: string): Promise<number> => 
   return count || 0;
 };
 
+export const getTotalSignatureCount = async (): Promise<number> => {
+  const { count, error } = await supabase
+    .from('signatures')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Error getting total signature count:', error);
+    return 0;
+  }
+
+  return count || 0;
+};
+
+export const getSentMessagesCount = async (): Promise<number> => {
+  const { count, error } = await supabase
+    .from('signatures')
+    .select('*', { count: 'exact', head: true })
+    .eq('mensagem_enviada', true);
+
+  if (error) {
+    console.error('Error getting sent messages count:', error);
+    return 0;
+  }
+
+  return count || 0;
+};
+
+export const getNotSentMessagesCount = async (): Promise<number> => {
+  const { count, error } = await supabase
+    .from('signatures')
+    .select('*', { count: 'exact', head: true })
+    .eq('mensagem_enviada', false);
+
+  if (error) {
+    console.error('Error getting not sent messages count:', error);
+    return 0;
+  }
+
+  return count || 0;
+};
+
 export const updateSignatureMessageStatus = async (petitionId: string, signatureId: string, mensagemEnviada: boolean): Promise<boolean> => {
   const { error } = await supabase
     .from('signatures')

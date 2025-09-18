@@ -5,7 +5,7 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: LucideIcon;
-  color: 'blue' | 'green' | 'orange' | 'purple';
+  color: 'blue' | 'green' | 'orange' | 'purple' | 'red';
   description?: string;
 }
 
@@ -21,6 +21,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     green: 'bg-green-500 text-green-600 dark:bg-green-400 dark:text-green-300',
     orange: 'bg-orange-500 text-orange-600 dark:bg-orange-400 dark:text-orange-300',
     purple: 'bg-purple-500 text-purple-600 dark:bg-purple-400 dark:text-purple-300',
+    red: 'bg-red-500 text-red-600 dark:bg-red-400 dark:text-red-300',
   } as const;
 
   return (

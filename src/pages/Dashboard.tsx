@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Users, TrendingUp, Plus } from 'lucide-react';
 import { StatsCard } from '../components/StatsCard';
-import { getPetitions, getSignatureCount } from '../utils/supabase-storage';
+import { getPetitions, getTotalSignatureCount, getSentMessagesCount, getNotSentMessagesCount } from '../utils/supabase-storage';
 import { Petition } from '../types';
 
 export const Dashboard: React.FC = () => {
   const [petitions, setPetitions] = useState<Petition[]>([]);
   const [totalSignatures, setTotalSignatures] = useState(0);
+  const [sentMessages, setSentMessages] = useState(0);
+  const [notSentMessages, setNotSentMessages] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,13 +18,16 @@ export const Dashboard: React.FC = () => {
         const allPetitions = await getPetitions();
         setPetitions(allPetitions);
         
-        // Contar assinaturas de todas as petitions
-        let total = 0;
-        for (const petition of allPetitions) {
-          const count = await getSignatureCount(petition.id);
-          total += count;
-        }
-        setTotalSignatures(total);
+        // Carregar métricas em paralelo
+        const [totalSignaturesCount, sentMessagesCount, notSentMessagesCount] = await Promise.all([
+          getTotalSignatureCount(),
+          getSentMessagesCount(),
+          getNotSentMessagesCount()
+        ]);
+        
+        setTotalSignatures(totalSignaturesCount);
+        setSentMessages(sentMessagesCount);
+        setNotSentMessages(notSentMessagesCount);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -42,9 +47,6 @@ export const Dashboard: React.FC = () => {
   }
 
   const recentPetitions = petitions.length;
-  const avgSignaturesPerPetition = petitions.length > 0 
-    ? Math.round(totalSignatures / petitions.length) 
-    : 0;
 
   const latestPetitions = petitions
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -85,18 +87,18 @@ export const Dashboard: React.FC = () => {
           description="Digitalizadas no sistema"
         />
         <StatsCard
-          title="Abaixo-Assinados Recentes"
-          value={recentPetitions}
+          title="Mensagens Enviadas"
+          value={sentMessages}
           icon={TrendingUp}
-          color="orange"
-          description="Cadastrados este mês"
+          color="green"
+          description="WhatsApp enviados"
         />
         <StatsCard
-          title="Média por Abaixo-Assinado"
-          value={avgSignaturesPerPetition}
+          title="Mensagens Não Enviadas"
+          value={notSentMessages}
           icon={Users}
-          color="purple"
-          description="Assinaturas por documento"
+          color="red"
+          description="Pendentes de envio"
         />
       </div>
 
