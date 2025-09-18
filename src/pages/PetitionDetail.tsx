@@ -141,7 +141,7 @@ export const PetitionDetail: React.FC = () => {
 
     // Check for duplicate phone
     const normalizedPhone = normalizePhone(newSignature.phone);
-    const isDuplicate = await checkPhoneDuplicate(petition.tableName, normalizedPhone);
+    const isDuplicate = await checkPhoneDuplicate(petition.id, normalizedPhone);
     if (isDuplicate) {
       errors.phone = 'Este telefone já foi cadastrado neste abaixo-assinado';
     }
@@ -162,7 +162,7 @@ export const PetitionDetail: React.FC = () => {
     };
 
     try {
-      const savedSignature = await saveSignature(petition.tableName, signatureData);
+      const savedSignature = await saveSignature(petition.id, signatureData);
       if (savedSignature) {
         setSignatures(prev => [savedSignature, ...prev]);
         
@@ -189,7 +189,7 @@ export const PetitionDetail: React.FC = () => {
     if (!petition) return;
 
     try {
-      const success = await updateSignatureMessageStatus(petition.tableName, signatureId, mensagemEnviada);
+      const success = await updateSignatureMessageStatus(petition.id, signatureId, mensagemEnviada);
       if (success) {
         setSignatures(prev => prev.map(sig => 
           sig.id === signatureId 
@@ -498,7 +498,7 @@ export const PetitionDetail: React.FC = () => {
                                       setSignatureErrors({ name: nameError });
                                       return;
                                     }
-                                    const updated = await updateSignature(petition.tableName, signature.id, { name: trimmed });
+                                    const updated = await updateSignature(petition.id, signature.id, { name: trimmed });
                                     if (updated) {
                                       setSignatures((prev) => prev.map((s) => (s.id === signature.id ? { ...s, name: updated.name } : s)));
                                       setEditingSignatureId(null);
@@ -955,7 +955,7 @@ export const PetitionDetail: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     CEP
                   </label>
                   <div className="relative">
@@ -965,8 +965,8 @@ export const PetitionDetail: React.FC = () => {
                       onChange={(e) => handleCEPChange(e.target.value)}
                       placeholder="00000-000"
                       maxLength={9}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        signatureErrors.zipCode ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 ${
+                        signatureErrors.zipCode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                       } ${isLoadingCEP ? 'pr-10' : ''}`}
                     />
                     {isLoadingCEP && (
@@ -976,54 +976,54 @@ export const PetitionDetail: React.FC = () => {
                     )}
                   </div>
                   {signatureErrors.zipCode && (
-                    <p className="text-red-600 text-sm mt-1">{signatureErrors.zipCode}</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm mt-1">{signatureErrors.zipCode}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     O endereço será preenchido automaticamente
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Rua
                   </label>
                   <input
                     type="text"
                     value={newSignature.street}
                     onChange={(e) => setNewSignature(prev => ({ ...prev, street: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Será preenchido automaticamente pelo CEP"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Bairro
                   </label>
                   <input
                     type="text"
                     value={newSignature.neighborhood}
                     onChange={(e) => setNewSignature(prev => ({ ...prev, neighborhood: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Será preenchido automaticamente pelo CEP"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Cidade
                     </label>
                     <input
                       type="text"
                       value={newSignature.city}
                       onChange={(e) => setNewSignature(prev => ({ ...prev, city: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="Será preenchido automaticamente pelo CEP"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       UF
                     </label>
                     <input
@@ -1032,19 +1032,19 @@ export const PetitionDetail: React.FC = () => {
                       onChange={(e) => setNewSignature(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
                       maxLength={2}
                       placeholder="Preenchido pelo CEP"
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        signatureErrors.state ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 ${
+                        signatureErrors.state ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                     />
                     {signatureErrors.state && (
-                      <p className="text-red-600 text-sm mt-1">{signatureErrors.state}</p>
+                      <p className="text-red-600 dark:text-red-400 text-sm mt-1">{signatureErrors.state}</p>
                     )}
                   </div>
                 </div>
 
                 {signatureErrors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-600 text-sm">{signatureErrors.general}</p>
+                  <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <p className="text-red-600 dark:text-red-400 text-sm">{signatureErrors.general}</p>
                   </div>
                 )}
 
@@ -1070,7 +1070,7 @@ export const PetitionDetail: React.FC = () => {
                         zipCode: '',
                       });
                     }}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
                     Cancelar
                   </button>

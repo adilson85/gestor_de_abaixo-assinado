@@ -327,11 +327,12 @@ export const getSignatureCount = async (petitionId: string): Promise<number> => 
   return count || 0;
 };
 
-export const updateSignatureMessageStatus = async (signatureId: string, mensagemEnviada: boolean): Promise<boolean> => {
+export const updateSignatureMessageStatus = async (petitionId: string, signatureId: string, mensagemEnviada: boolean): Promise<boolean> => {
   const { error } = await supabase
     .from('signatures')
     .update({ mensagem_enviada: mensagemEnviada })
-    .eq('id', signatureId);
+    .eq('id', signatureId)
+    .eq('petition_id', petitionId);
 
   if (error) {
     console.error('Error updating signature message status:', error);
