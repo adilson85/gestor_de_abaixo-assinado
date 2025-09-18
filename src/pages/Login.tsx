@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContextSimple';
+import { useAuth } from '../components/AuthProvider';
 import { useTheme } from '../contexts/ThemeContext';
 
 export const Login: React.FC = () => {
-  const { signIn, user, loading, isAdmin, signOut } = useAuth();
+  const { signIn, user, loading, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  // Redirecionar somente se já estiver logado E for admin
-  if (user && !loading && isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Se logado mas sem permissão admin, força saída para evitar loop
-  if (user && !loading && !isAdmin) {
-    signOut();
-  }
+  // Redirecionar se já estiver logado E for admin
+  useEffect(() => {
+    if (user && !loading && isAdmin) {
+      const next = searchParams.get('next') || '/dashboard';
+      navigate(next, { replace: true });
+    }
+  }, [user, loading, isAdmin, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +44,10 @@ export const Login: React.FC = () => {
       } else {
         setError('Erro ao fazer login. Tente novamente');
       }
+    } else {
+      // Login bem-sucedido, redirecionar
+      const next = searchParams.get('next') || '/dashboard';
+      navigate(next, { replace: true });
     }
 
     setIsLoading(false);
@@ -51,7 +55,7 @@ export const Login: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );

@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContextSimple';
+import AuthProvider from './components/AuthProvider';
+import RouteGuard from './components/RouteGuard';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -11,7 +11,6 @@ import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './utils/error-monitoring';
-// Guards removidos para simplificar e evitar travamentos
 
 function App() {
   return (
@@ -19,23 +18,13 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <AppContent />
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
-}
-
-function AppContent() {
-  return (
-            <Routes>
-              {/* Login route */}
-              <Route path="/login" element={<Login />} />
-              
-              {/* Protected application routes */}
-              <Route path="/*" element={
-                <ProtectedRoute>
+            <RouteGuard>
+              <Routes>
+                {/* Login route - public */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Protected application routes */}
+                <Route path="/*" element={
                   <Layout>
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -46,9 +35,13 @@ function AppContent() {
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </Layout>
-                </ProtectedRoute>
-              } />
-            </Routes>
+                } />
+              </Routes>
+            </RouteGuard>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContextSimple';
+import { useAuth } from './AuthProvider';
 import { 
   LayoutDashboard, 
   FileText, 

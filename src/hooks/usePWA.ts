@@ -18,7 +18,7 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // PWA simplificado - funcionalidades offline removidas para evitar travamentos
+    // PWA completamente desabilitado para evitar loops
     return;
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
