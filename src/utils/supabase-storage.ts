@@ -86,10 +86,49 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   console.log('Petition created successfully:', data);
 
-  // Criar tabela específica para as assinaturas
+  // Criar tabela específica para as assinaturas usando SQL direto
   console.log('Creating signatures table:', tableName);
-  const { error: tableError } = await supabase.rpc('create_signatures_table', {
-    table_name: tableName
+  
+  // Usar exec() para executar SQL direto em vez da função RPC
+  const { error: tableError } = await supabase.rpc('exec', {
+    sql: `
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        street TEXT,
+        neighborhood TEXT,
+        city TEXT,
+        state TEXT,
+        zip_code TEXT,
+        mensagem_enviada BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+      );
+      
+      -- Grant permissions
+      GRANT ALL ON TABLE ${tableName} TO authenticated;
+      GRANT ALL ON TABLE ${tableName} TO service_role;
+      
+      -- Enable RLS
+      ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;
+      
+      -- Create policies
+      CREATE POLICY IF NOT EXISTS "Users can view signatures" ON ${tableName}
+      FOR SELECT TO authenticated
+      USING (true);
+      
+      CREATE POLICY IF NOT EXISTS "Users can insert signatures" ON ${tableName}
+      FOR INSERT TO authenticated
+      WITH CHECK (true);
+      
+      CREATE POLICY IF NOT EXISTS "Users can update signatures" ON ${tableName}
+      FOR UPDATE TO authenticated
+      USING (true);
+      
+      CREATE POLICY IF NOT EXISTS "Users can delete signatures" ON ${tableName}
+      FOR DELETE TO authenticated
+      USING (true);
+    `
   });
 
   if (tableError) {
