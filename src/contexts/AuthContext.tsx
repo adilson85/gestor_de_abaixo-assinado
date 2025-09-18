@@ -29,6 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let initialized = false;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     const checkAdmin = async (userId: string) => {
       try {
@@ -49,6 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const initAuth = async () => {
+      if (initialized) return; // Evita múltiplas inicializações
+      initialized = true;
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -72,25 +77,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
+    // Listener com debounce para evitar múltiplas chamadas
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-
-        setSession(session);
-        setUser(session?.user ?? null);
         
-        if (session?.user && event !== 'SIGNED_OUT') {
-          await checkAdmin(session.user.id);
-        } else {
-          setIsAdmin(false);
+        // Debounce para evitar múltiplas chamadas
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
         
-        setLoading(false);
+        timeoutId = setTimeout(() => {
+          if (!mounted) return;
+          
+          // Só reage a eventos importantes, não a refresh de token
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user && event === 'SIGNED_IN') {
+              checkAdmin(session.user.id);
+            } else {
+              setIsAdmin(false);
+            }
+          }
+        }, 100); // 100ms de debounce
       }
     );
 
     return () => {
       mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       subscription.unsubscribe();
     };
   }, []);
