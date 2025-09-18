@@ -1,67 +1,161 @@
-#!/usr/bin/env node
+// Script para configurar o Supabase com as migrações necessárias
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-console.log('🚀 Configurando Supabase para o Gestor de Abaixo-Assinado...\n');
-
-// Lê variáveis de ambiente (nunca comitar credenciais)
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️  VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY não definidos no ambiente.');
-  console.warn('    Defina as variáveis no seu shell ou crie um .env.local manualmente.');
-}
-
-// Conteúdo do arquivo .env.local
-const envContent = `# Configurações do Supabase
-VITE_SUPABASE_URL=${supabaseUrl}
-VITE_SUPABASE_ANON_KEY=${supabaseAnonKey}
-`;
-
-// Caminho do arquivo .env.local
-const envPath = path.join(__dirname, '.env.local');
-
+// Carregar variáveis de ambiente
+let supabaseUrl, supabaseAnonKey;
 try {
-  // Verificar se o arquivo já existe
-  if (fs.existsSync(envPath)) {
-    console.log('⚠️  Arquivo .env.local já existe. Fazendo backup...');
-    const backupPath = path.join(__dirname, '.env.local.backup');
-    fs.copyFileSync(envPath, backupPath);
-    console.log('✅ Backup criado em .env.local.backup');
-  }
-
-  // Criar o arquivo .env.local
-  fs.writeFileSync(envPath, envContent);
-  console.log('✅ Arquivo .env.local criado com sucesso!');
-
-  console.log('\n📋 Próximos passos:');
-  console.log('1. Execute as migrações no painel do Supabase');
-  console.log('2. Configure o bucket de storage "petition-images"');
-  console.log('3. Crie um usuário administrador');
-  console.log('4. Execute: npm run dev');
+  const envContent = readFileSync('.env.local', 'utf8');
+  const lines = envContent.split('\n');
   
-  console.log('\n🔗 Links úteis:');
-  console.log(`- Painel Supabase: ${supabaseUrl || 'https://app.supabase.com/'}`);
-  console.log('- SQL Editor: disponível no painel do seu projeto');
-  console.log('- Storage: disponível no painel do seu projeto');
-  console.log('- Auth: disponível no painel do seu projeto');
-
-  console.log('\n📁 Arquivos de migração:');
-  console.log('- supabase/migrations/20250915132944_twilight_sea.sql');
-  console.log('- supabase/migrations/20250917051108_broken_resonance.sql');
-  console.log('- supabase/migrations/20250917051357_broad_frost.sql');
-  console.log('- supabase/migrations/20250120000000_add_image_url.sql');
-  console.log('- supabase/migrations/20250120000001_create_logs_tables.sql');
-
-} catch (error) {
-  console.error('❌ Erro ao criar arquivo .env.local:', error.message);
+  for (const line of lines) {
+    if (line.startsWith('VITE_SUPABASE_URL=')) {
+      supabaseUrl = line.split('=')[1];
+    }
+    if (line.startsWith('VITE_SUPABASE_ANON_KEY=')) {
+      supabaseAnonKey = line.split('=')[1];
+    }
+  }
+} catch (err) {
+  console.error('❌ Erro ao ler .env.local:', err.message);
   process.exit(1);
 }
 
-console.log('\n🎉 Configuração concluída!');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Variáveis de ambiente não encontradas!');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+async function setupSupabase() {
+  console.log('🔧 Configurando Supabase...');
+  
+  try {
+    // 1. Verificar se a função existe
+    console.log('📋 Verificando função create_signatures_table...');
+    const { data: functions, error: functionsError } = await supabase
+      .from('pg_proc')
+      .select('proname')
+      .eq('proname', 'create_signatures_table');
+    
+    if (functionsError) {
+      console.log('⚠️  Não foi possível verificar funções (normal se não for admin)');
+    } else {
+      console.log('📊 Funções encontradas:', functions);
+    }
+    
+    // 2. Tentar executar a migração diretamente
+    console.log('🚀 Executando migração create_signatures_table...');
+    
+    const migrationSQL = `
+CREATE OR REPLACE FUNCTION create_signatures_table(table_name TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Create the signatures table with proper structure
+    EXECUTE format('
+        CREATE TABLE IF NOT EXISTS %I (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            street TEXT,
+            neighborhood TEXT,
+            city TEXT,
+            state TEXT,
+            zip_code TEXT,
+            mensagem_enviada BOOLEAN DEFAULT false,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );
+    ', table_name);
+    
+    -- Grant permissions
+    EXECUTE format('GRANT ALL ON TABLE %I TO authenticated;', table_name);
+    EXECUTE format('GRANT ALL ON TABLE %I TO service_role;', table_name);
+    
+    -- Enable RLS
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', table_name);
+    
+    -- Create policies
+    EXECUTE format('
+        CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON %I 
+        FOR SELECT USING (true);
+    ', table_name);
+    
+    EXECUTE format('
+        CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON %I 
+        FOR INSERT WITH CHECK (auth.role() = ''authenticated'');
+    ', table_name);
+    
+    EXECUTE format('
+        CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON %I 
+        FOR UPDATE USING (auth.role() = ''authenticated'');
+    ', table_name);
+    
+    EXECUTE format('
+        CREATE POLICY IF NOT EXISTS "Enable delete for authenticated users" ON %I 
+        FOR DELETE USING (auth.role() = ''authenticated'');
+    ', table_name);
+END;
+$$;
+    `;
+    
+    // Tentar executar via RPC exec (se existir)
+    const { error: execError } = await supabase.rpc('exec', {
+      sql: migrationSQL
+    });
+    
+    if (execError) {
+      console.log('⚠️  RPC exec não disponível, tentando método alternativo...');
+      
+      // Método alternativo: tentar criar a função via query direta
+      const { error: queryError } = await supabase
+        .from('information_schema.routines')
+        .select('*')
+        .limit(1);
+      
+      if (queryError) {
+        console.error('❌ Não foi possível executar migração automaticamente');
+        console.error('📋 Execute manualmente no SQL Editor do Supabase:');
+        console.log('\n' + '='.repeat(80));
+        console.log(migrationSQL);
+        console.log('='.repeat(80) + '\n');
+      }
+    } else {
+      console.log('✅ Migração executada com sucesso!');
+    }
+    
+    // 3. Testar a função
+    console.log('🧪 Testando função create_signatures_table...');
+    const testTableName = `test_table_${Date.now()}`;
+    
+    const { data, error } = await supabase.rpc('create_signatures_table', {
+      table_name: testTableName
+    });
+    
+    if (error) {
+      console.error('❌ Erro na função create_signatures_table:', error);
+      console.error('Detalhes:', JSON.stringify(error, null, 2));
+    } else {
+      console.log('✅ Função create_signatures_table funcionando!');
+      console.log('📊 Resultado:', data);
+      
+      // Limpar tabela de teste
+      try {
+        await supabase.rpc('exec', {
+          sql: `DROP TABLE IF EXISTS ${testTableName}`
+        });
+        console.log('🧹 Tabela de teste removida');
+      } catch (cleanupError) {
+        console.log('⚠️  Não foi possível limpar tabela de teste');
+      }
+    }
+    
+  } catch (err) {
+    console.error('❌ Erro geral:', err);
+  }
+}
+
+setupSupabase();

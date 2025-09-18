@@ -30,3 +30,124 @@ export interface ValidationError {
   field: string;
   message: string;
 }
+
+// Kanban Types
+export interface KanbanBoard {
+  id: string;
+  petitionId: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface KanbanColumn {
+  id: string;
+  boardId: string;
+  name: string;
+  position: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface KanbanTask {
+  id: string;
+  boardId: string;
+  columnId: string;
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: Date;
+  position: number;
+  isArchived: boolean;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  assignees?: KanbanTaskAssignee[];
+  labels?: KanbanTaskLabel[];
+  checklists?: KanbanChecklist[];
+  attachments?: KanbanAttachment[];
+  comments?: KanbanComment[];
+}
+
+export interface KanbanTaskAssignee {
+  id: string;
+  taskId: string;
+  userId: string;
+  assignedAt: Date;
+  user?: {
+    id: string;
+    email: string;
+  };
+}
+
+export interface KanbanLabel {
+  id: string;
+  boardId: string;
+  name: string;
+  color: string;
+  createdAt: Date;
+}
+
+export interface KanbanTaskLabel {
+  id: string;
+  taskId: string;
+  labelId: string;
+  label?: KanbanLabel;
+}
+
+export interface KanbanChecklist {
+  id: string;
+  taskId: string;
+  title: string;
+  position: number;
+  createdAt: Date;
+  items?: KanbanChecklistItem[];
+}
+
+export interface KanbanChecklistItem {
+  id: string;
+  checklistId: string;
+  text: string;
+  isCompleted: boolean;
+  position: number;
+  createdAt: Date;
+}
+
+export interface KanbanAttachment {
+  id: string;
+  taskId: string;
+  type: 'link' | 'file';
+  url?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface KanbanComment {
+  id: string;
+  taskId: string;
+  authorId: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  author?: {
+    id: string;
+    email: string;
+  };
+}
+
+export interface KanbanActivity {
+  id: string;
+  taskId: string;
+  actorId: string;
+  actionType: string;
+  payload?: any;
+  createdAt: Date;
+  actor?: {
+    id: string;
+    email: string;
+  };
+}

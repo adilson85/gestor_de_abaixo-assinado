@@ -23,17 +23,17 @@ GRANT ALL ON TABLE signatures TO service_role;
 -- 3. Enable RLS
 ALTER TABLE signatures ENABLE ROW LEVEL SECURITY;
 
--- 4. Create policies
-CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON signatures 
+-- 4. Create policies (sem IF NOT EXISTS)
+CREATE POLICY "Enable read access for all users" ON signatures 
 FOR SELECT USING (true);
 
-CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON signatures 
+CREATE POLICY "Enable insert for authenticated users" ON signatures 
 FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON signatures 
+CREATE POLICY "Enable update for authenticated users" ON signatures 
 FOR UPDATE USING (auth.role() = 'authenticated');
 
-CREATE POLICY IF NOT EXISTS "Enable delete for authenticated users" ON signatures 
+CREATE POLICY "Enable delete for authenticated users" ON signatures 
 FOR DELETE USING (auth.role() = 'authenticated');
 
 -- 5. Criar índices para performance
