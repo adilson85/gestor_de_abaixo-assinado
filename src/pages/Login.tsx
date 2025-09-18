@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
-import { useAuth } from '../components/AuthProvider';
+import { useAuth } from '../components/SimpleAuthProvider';
 import { useTheme } from '../contexts/ThemeContext';
 
 export const Login: React.FC = () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AuthProvider from './components/AuthProvider';
-import RouteGuard from './components/RouteGuard';
+import { AuthProvider } from './components/SimpleAuthProvider';
+import { SimpleRouteGuard } from './components/SimpleRouteGuard';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -18,7 +18,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <RouteGuard>
+            <SimpleRouteGuard>
               <Routes>
                 {/* Login route - public */}
                 <Route path="/login" element={<Login />} />
@@ -37,7 +37,7 @@ function App() {
                   </Layout>
                 } />
               </Routes>
-            </RouteGuard>
+            </SimpleRouteGuard>
           </Router>
         </AuthProvider>
       </ThemeProvider>
