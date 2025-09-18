@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabase";
 
 type AuthCtx = { 
   user: User | null; 
@@ -48,29 +48,43 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     let unsub: { data: { subscription: { unsubscribe(): void } } } | null = null;
     
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session || null);
-      setUser(session?.user || null);
-      
-      if (session?.user) {
-        await checkAdmin(session.user.id);
-      }
-      
-      setLoading(false);
-      
-      unsub = supabase.auth.onAuthStateChange(async (_evt, s) => {
-        setSession(s || null);
-        setUser(s?.user || null);
+      try {
+        console.log('AuthProvider: Iniciando verificação de sessão...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('AuthProvider: Sessão obtida:', !!session);
         
-        if (s?.user) {
-          await checkAdmin(s.user.id);
-        } else {
-          setIsAdmin(false);
+        setSession(session || null);
+        setUser(session?.user || null);
+        
+        if (session?.user) {
+          console.log('AuthProvider: Verificando admin para:', session.user.email);
+          await checkAdmin(session.user.id);
         }
-      });
+        
+        console.log('AuthProvider: Definindo loading = false');
+        setLoading(false);
+        
+        unsub = supabase.auth.onAuthStateChange(async (event, s) => {
+          console.log('AuthProvider: Auth state change:', event, !!s);
+          setSession(s || null);
+          setUser(s?.user || null);
+          
+          if (s?.user) {
+            await checkAdmin(s.user.id);
+          } else {
+            setIsAdmin(false);
+          }
+        });
+      } catch (error) {
+        console.error('AuthProvider: Erro na inicialização:', error);
+        setLoading(false);
+      }
     })();
     
-    return () => unsub?.data.subscription.unsubscribe();
+    return () => {
+      console.log('AuthProvider: Cleanup - unsubscribing');
+      unsub?.data.subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

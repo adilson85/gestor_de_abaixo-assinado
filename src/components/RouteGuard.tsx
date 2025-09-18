@@ -11,10 +11,8 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
   const navigate = useNavigate();
   const redirected = useRef(false);
 
-  const isPublic = PUBLIC_PREFIXES.some((p) =>
-    p === location.pathname || location.pathname.startsWith(p + "/") || location.pathname === "/"
-      ? p === "/login" || p === "/a" || p === "/api/public" || p === "/privacy"
-      : location.pathname.startsWith(p)
+  const isPublic = PUBLIC_PREFIXES.some((p) => 
+    location.pathname === p || location.pathname.startsWith(p + "/")
   );
 
   useEffect(() => {

@@ -13,6 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: false, // Evita problemas de URL
     storage: localStorage,
+    flowType: 'pkce', // Recomendado para client-side
   },
 });
 
