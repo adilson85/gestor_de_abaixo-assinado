@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContextSimple';
 import { useTheme } from '../contexts/ThemeContext';
 
 export const Login: React.FC = () => {

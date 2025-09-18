@@ -11,15 +11,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // Evita problemas de URL
     storage: localStorage,
-    flowType: 'pkce',
-    debug: process.env.NODE_ENV === 'development',
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'gestor-abaixo-assinado@1.0.0',
-    },
   },
 });
 
