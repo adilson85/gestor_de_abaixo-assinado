@@ -221,7 +221,6 @@ export const PetitionList: React.FC = () => {
             />
           </>
         )}
-      </div>
     </div>
   );
 };

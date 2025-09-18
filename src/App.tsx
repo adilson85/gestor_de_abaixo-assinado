@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { PetitionList } from './pages/PetitionList';
 import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
+import { Tasks } from './pages/Tasks';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './utils/error-monitoring';
 
@@ -32,6 +33,7 @@ function App() {
                       <Route path="/petitions" element={<PetitionList />} />
                       <Route path="/petitions/new" element={<CreatePetition />} />
                       <Route path="/petitions/:id" element={<PetitionDetail />} />
+                      <Route path="/tasks" element={<Tasks />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </Layout>

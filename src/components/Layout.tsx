@@ -11,7 +11,8 @@ import {
   Users,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  CheckCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 // PWANotifications removido para evitar travamentos
@@ -30,6 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/petitions', label: 'Abaixo-Assinados', icon: FileText },
+    { path: '/tasks', label: 'Tarefas', icon: CheckCircle },
     { path: '/settings', label: 'Configurações', icon: Settings },
   ];
 
