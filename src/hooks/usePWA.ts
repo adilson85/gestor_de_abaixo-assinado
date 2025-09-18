@@ -18,8 +18,8 @@ export const usePWA = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // PWA completamente desabilitado para evitar loops
-    return;
+    // PWA habilitado para instalação
+    console.log('PWA: Inicializando funcionalidades PWA...');
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                        (window.navigator as any).standalone === true;
@@ -43,16 +43,17 @@ export const usePWA = () => {
     const handleOnline = () => setPwaState(prev => ({ ...prev, isOnline: true }));
     const handleOffline = () => setPwaState(prev => ({ ...prev, isOnline: false }));
 
-    // Service Worker: apenas em produção
+    // Service Worker: registrar sempre
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          console.log('PWA: Service Worker registrado com sucesso:', registration);
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('PWA: Nova versão disponível');
                   setPwaState(prev => ({ ...prev, updateAvailable: true }));
                 }
               });
@@ -60,7 +61,7 @@ export const usePWA = () => {
           });
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          console.error('PWA: Erro ao registrar Service Worker:', registrationError);
         });
     }
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { PWANotifications } from './PWANotifications';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -39,6 +40,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* PWA Notifications */}
+      <PWANotifications />
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
