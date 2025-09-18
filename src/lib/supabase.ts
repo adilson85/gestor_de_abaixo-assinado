@@ -13,6 +13,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: localStorage,
+    flowType: 'pkce',
+    debug: process.env.NODE_ENV === 'development',
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'gestor-abaixo-assinado@1.0.0',
+    },
   },
 });
 

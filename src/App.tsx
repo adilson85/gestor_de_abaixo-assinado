@@ -11,6 +11,8 @@ import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
 import { Settings } from './pages/Settings';
 import { ErrorBoundary } from './utils/error-monitoring';
+import { useAuthGuard } from './hooks/useAuthGuard';
+import { useVisibilityGuard } from './hooks/useVisibilityGuard';
 
 function App() {
   return (
@@ -18,6 +20,19 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
+            <AppContent />
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
+  useAuthGuard();
+  useVisibilityGuard();
+  
+  return (
             <Routes>
               {/* Login route */}
               <Route path="/login" element={<Login />} />
@@ -38,10 +53,6 @@ function App() {
                 </ProtectedRoute>
               } />
             </Routes>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
   );
 }
 

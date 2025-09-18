@@ -1,5 +1,5 @@
 // Service Worker com atualização confiável para SPA
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5-auth-fix';
 const CACHE_NAME = `gestor-abaixo-assinado-${CACHE_VERSION}`;
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icon-192x192.svg', '/icon-512x512.svg'];
 
