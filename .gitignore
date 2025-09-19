@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .env*
 !.env.example
+
+# Arquivos de configuração privados
+CONFIGURACOES_SUPABASE_PRIVADO.md
+*.backup
+*_PRIVADO.*
