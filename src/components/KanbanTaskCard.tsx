@@ -91,17 +91,48 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
       {...attributes}
       {...listeners}
       className={clsx(
-        'bg-white dark:bg-gray-700 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:shadow-md transition-all duration-200',
-        isDragging && 'opacity-50 rotate-2 scale-105'
+        'bg-white dark:bg-gray-700 rounded-lg p-3 cursor-pointer transition-all duration-200',
+        // Sombreado melhorado
+        'shadow-md hover:shadow-lg hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20',
+        // Borda sutil
+        'border border-gray-200/60 dark:border-gray-600/60',
+        // Efeitos de hover
+        'hover:scale-[1.02] hover:-translate-y-0.5',
+        // Estado de arrastar
+        isDragging && 'opacity-50 rotate-2 scale-105 shadow-2xl'
       )}
-      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onClick={(event) => {
+        if (isDragging) {
+          return;
+        }
+        onClick();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!isDragging) {
+            onClick();
+          }
+        }
+      }}
     >
+      <div className="absolute top-2 right-2 w-6 h-6 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-all duration-200 z-30 pointer-events-none">
+        <div className="w-full h-full bg-blue-100 dark:bg-blue-800 rounded-md shadow-sm hover:shadow-md flex items-center justify-center transition-all duration-200">
+          <div className="flex flex-col gap-0.5">
+            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+          </div>
+        </div>
+      </div>
       {/* Priority and Labels */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {task.priority && (
             <span className={clsx(
-              'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+              'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium shadow-sm',
               getPriorityColor(task.priority)
             )}>
               {getPriorityIcon(task.priority)}
@@ -166,14 +197,14 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
                 {task.assignees.slice(0, 3).map((assignee) => (
                   <div
                     key={assignee.id}
-                    className="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white dark:border-gray-700"
+                    className="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white dark:border-gray-700 shadow-sm"
                     title={assignee.user?.email}
                   >
                     {assignee.user?.email?.charAt(0).toUpperCase()}
                   </div>
                 ))}
                 {task.assignees.length > 3 && (
-                  <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded-full flex items-center justify-center border-2 border-white dark:border-gray-700">
+                  <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded-full flex items-center justify-center border-2 border-white dark:border-gray-700 shadow-sm">
                     +{task.assignees.length - 3}
                   </div>
                 )}

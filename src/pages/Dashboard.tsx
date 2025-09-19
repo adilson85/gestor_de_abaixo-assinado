@@ -47,7 +47,6 @@ export const Dashboard: React.FC = () => {
   }
 
   const recentPetitions = petitions.length;
-
   const latestPetitions = petitions
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 5);
@@ -71,7 +70,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="Total de Abaixo-Assinados"
           value={petitions.length}
@@ -171,6 +170,7 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
     </div>
   );
 };

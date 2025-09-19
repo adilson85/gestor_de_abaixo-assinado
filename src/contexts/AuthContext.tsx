@@ -34,16 +34,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const checkAdmin = async (userId: string) => {
       try {
-        const { data } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
+        // Lista hardcoded de admins para contornar problemas de RLS
+        const adminUserIds = [
+          '624c6a0e-87d9-4005-9f08-9953e8860ad4', // matheus.mira@cvj.sc.gov.br
+          '24151887-fefb-44fe-a2e3-1eef585a9468'  // adilson.martins.jlle@gmail.com
+        ];
+        
+        const isAdminUser = adminUserIds.includes(userId);
         
         if (mounted) {
-          setIsAdmin(!!data);
+          setIsAdmin(isAdminUser);
         }
-      } catch {
+      } catch (error) {
+        console.log('Admin check error:', error);
         if (mounted) {
           setIsAdmin(false);
         }

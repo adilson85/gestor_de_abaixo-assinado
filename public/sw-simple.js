@@ -13,3 +13,4 @@ self.addEventListener('activate', (event) => {
 });
 
 // Não interceptar nenhuma requisição para evitar interferência
+

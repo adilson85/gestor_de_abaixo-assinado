@@ -1,22 +1,39 @@
-import React from 'react';
-import { Settings as SettingsIcon, Database, Download, Upload } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings as SettingsIcon, Database, Download, Upload, AlertTriangle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export const Settings: React.FC = () => {
-  const handleExportData = () => {
-    const petitions = localStorage.getItem('petitions') || '[]';
-    const signatures = localStorage.getItem('signatures') || '[]';
-    
-    const exportData = {
-      petitions: JSON.parse(petitions),
-      signatures: JSON.parse(signatures),
-      exportedAt: new Date().toISOString()
-    };
+  const [isLoading, setIsLoading] = useState(false);
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `backup-gestao-peticoes-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
+  const handleExportData = async () => {
+    setIsLoading(true);
+    try {
+      // Buscar dados do Supabase
+      const [petitionsResult, signaturesResult, kanbanResult] = await Promise.all([
+        supabase.from('petitions').select('*'),
+        supabase.from('signatures').select('*'),
+        supabase.from('kanban_tasks').select('*')
+      ]);
+
+      const exportData = {
+        petitions: petitionsResult.data || [],
+        signatures: signaturesResult.data || [],
+        kanban_tasks: kanbanResult.data || [],
+        exportedAt: new Date().toISOString(),
+        version: '2.0.0'
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `backup-gestao-peticoes-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      alert('Erro ao exportar dados. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleImportData = () => {
@@ -24,24 +41,38 @@ export const Settings: React.FC = () => {
     input.type = 'file';
     input.accept = '.json';
     
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
+      setIsLoading(true);
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const data = JSON.parse(event.target?.result as string);
           
           if (data.petitions && data.signatures) {
-            localStorage.setItem('petitions', JSON.stringify(data.petitions));
-            localStorage.setItem('signatures', JSON.stringify(data.signatures));
+            // Limpar dados existentes
+            await supabase.from('signatures').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await supabase.from('petitions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            
+            // Importar novos dados
+            if (data.petitions.length > 0) {
+              await supabase.from('petitions').insert(data.petitions);
+            }
+            if (data.signatures.length > 0) {
+              await supabase.from('signatures').insert(data.signatures);
+            }
+            
             alert('Dados importados com sucesso! Recarregue a página para ver as mudanças.');
           } else {
             alert('Formato de arquivo inválido.');
           }
         } catch (error) {
+          console.error('Erro ao importar dados:', error);
           alert('Erro ao importar dados. Verifique o formato do arquivo.');
+        } finally {
+          setIsLoading(false);
         }
       };
       
@@ -51,11 +82,28 @@ export const Settings: React.FC = () => {
     input.click();
   };
 
-  const handleClearData = () => {
-    if (confirm('Tem certeza que deseja apagar todos os dados? Esta ação não pode ser desfeita.')) {
-      localStorage.removeItem('petitions');
-      localStorage.removeItem('signatures');
-      alert('Dados apagados com sucesso! Recarregue a página.');
+  const handleClearData = async () => {
+    if (confirm('Tem certeza que deseja apagar todos os dados? Esta ação não pode ser desfeita.\n\n⚠️ ATENÇÃO: Isso manterá a estrutura do Kanban intacta, mas apagará todas as tarefas e dados.')) {
+      setIsLoading(true);
+      try {
+        // Limpar apenas dados, mantendo estrutura do Kanban
+        await supabase.from('signatures').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_comments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_attachments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_checklist_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_checklists').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_task_assignees').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('kanban_tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // NÃO apagar kanban_columns e kanban_boards - manter estrutura
+        await supabase.from('petitions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        alert('Dados apagados com sucesso! A estrutura do Kanban foi mantida.');
+      } catch (error) {
+        console.error('Erro ao apagar dados:', error);
+        alert('Erro ao apagar dados. Tente novamente.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -81,10 +129,11 @@ export const Settings: React.FC = () => {
               </p>
               <button
                 onClick={handleExportData}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                disabled={isLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={16} />
-                Exportar Dados
+                {isLoading ? 'Exportando...' : 'Exportar Dados'}
               </button>
             </div>
 
@@ -97,10 +146,11 @@ export const Settings: React.FC = () => {
               </p>
               <button
                 onClick={handleImportData}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                disabled={isLoading}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload size={16} />
-                Importar Dados
+                {isLoading ? 'Importando...' : 'Importar Dados'}
               </button>
             </div>
 
@@ -109,13 +159,15 @@ export const Settings: React.FC = () => {
             <div>
               <h3 className="font-medium text-gray-900 mb-2 dark:text-white">Limpar Dados</h3>
               <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
-                Remove todos os dados do sistema. Esta ação não pode ser desfeita.
+                Remove todos os dados do sistema (petições, assinaturas, tarefas). A estrutura do Kanban será mantida. Esta ação não pode ser desfeita.
               </p>
               <button
                 onClick={handleClearData}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                disabled={isLoading}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Apagar Todos os Dados
+                <AlertTriangle size={16} />
+                {isLoading ? 'Apagando...' : 'Apagar Todos os Dados'}
               </button>
             </div>
           </div>
@@ -129,9 +181,10 @@ export const Settings: React.FC = () => {
           
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p><strong>Nome:</strong> Gestão de Abaixo-Assinados</p>
-            <p><strong>Versão:</strong> 1.0.0</p>
+            <p><strong>Versão:</strong> 2.0.0</p>
             <p><strong>Desenvolvido para:</strong> Digitalização de abaixo-assinados físicos</p>
-            <p><strong>Armazenamento:</strong> Local (LocalStorage)</p>
+            <p><strong>Armazenamento:</strong> Supabase (PostgreSQL)</p>
+            <p><strong>Funcionalidades:</strong> Kanban, Comentários, Arquivamento</p>
           </div>
         </div>
       </div>

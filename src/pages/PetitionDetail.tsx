@@ -35,7 +35,6 @@ import { Petition, Signature } from '../types';
 import { validateName, validatePhone, validateState, validateZipCode, normalizePhone, formatPhone } from '../utils/validation';
 import { fetchAddressByCEP, formatCEP } from '../utils/cep';
 import { Pagination } from '../components/Pagination';
-import { ReportsChart } from '../components/ReportsChart';
 import { useDebounce } from '../hooks/useDebounce';
 import { getPetitionResources, addPetitionResource, deletePetitionResource } from '../utils/supabase-storage';
 
@@ -44,7 +43,7 @@ export const PetitionDetail: React.FC = () => {
   const navigate = useNavigate();
   const [petition, setPetition] = useState<Petition | null>(null);
   const [signatures, setSignatures] = useState<Signature[]>([]);
-  const [activeTab, setActiveTab] = useState<'signatures' | 'settings' | 'export' | 'reports' | 'links'>('signatures');
+  const [activeTab, setActiveTab] = useState<'signatures' | 'settings' | 'export' | 'links'>('signatures');
   const [showAddSignature, setShowAddSignature] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
@@ -359,7 +358,6 @@ export const PetitionDetail: React.FC = () => {
           {[
             { key: 'signatures', label: 'Assinaturas', icon: Users },
             { key: 'links', label: 'Links', icon: ExternalLink },
-            { key: 'reports', label: 'Relatórios', icon: BarChart3 },
             { key: 'settings', label: 'Configurações', icon: Settings },
             { key: 'export', label: 'Exportar', icon: Download },
           ].map(({ key, label, icon: Icon }) => (
@@ -623,16 +621,6 @@ export const PetitionDetail: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'reports' && (
-        <div>
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Relatórios e Estatísticas</h2>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Análise detalhada das assinaturas coletadas</p>
-          </div>
-          
-          <ReportsChart signatures={signatures} />
-        </div>
-      )}
 
       {activeTab === 'links' && petition && (
         <div>

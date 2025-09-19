@@ -43,11 +43,13 @@ export const usePWA = () => {
     const handleOnline = () => setPwaState(prev => ({ ...prev, isOnline: true }));
     const handleOffline = () => setPwaState(prev => ({ ...prev, isOnline: false }));
 
-    // Service Worker: registrar sempre
+    // Service Worker: registrar e configurar fluxo controlado
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
           console.log('PWA: Service Worker registrado com sucesso:', registration);
+          
+          // Listener para nova versão
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
@@ -63,6 +65,26 @@ export const usePWA = () => {
         .catch((registrationError) => {
           console.error('PWA: Erro ao registrar Service Worker:', registrationError);
         });
+
+      // Listener para mensagens do Service Worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const { data } = event;
+        
+        if (data.type === 'UPDATE_AVAILABLE') {
+          console.log('PWA: Nova versão disponível:', data.buildId);
+          setPwaState(prev => ({ ...prev, updateAvailable: true }));
+        }
+        
+        if (data.type === 'NEW_VERSION_INSTALLING') {
+          console.log('PWA: Nova versão sendo instalada:', data.buildId);
+        }
+      });
+
+      // Listener para mudança de controller
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('PWA: Service Worker atualizado, recarregando...');
+        window.location.reload();
+      });
     }
 
     // Add event listeners
@@ -98,7 +120,12 @@ export const usePWA = () => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((registration) => {
         if (registration && registration.waiting) {
+          console.log('PWA: Aplicando atualização...');
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          // O reload será feito automaticamente no controllerchange
+        } else if (registration && registration.active) {
+          // Força reload se não há waiting worker
+          console.log('PWA: Forçando reload...');
           window.location.reload();
         }
       });

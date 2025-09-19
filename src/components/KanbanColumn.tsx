@@ -4,8 +4,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanColumn as KanbanColumnType, KanbanTask } from '../types';
 import { KanbanTaskCard } from './KanbanTaskCard';
 import { KanbanTaskModal } from './KanbanTaskModal';
-import { createKanbanTask } from '../utils/kanban-storage';
 import { Plus, MoreHorizontal } from 'lucide-react';
+import clsx from 'clsx';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
@@ -21,59 +21,124 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onTaskCreate
 }) => {
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
 
-  const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
-
-    try {
-      setIsCreating(true);
-      const newTask = await createKanbanTask(
-        column.boardId,
-        column.id,
-        newTaskTitle.trim()
-      );
-
-      if (newTask) {
-        onTaskCreate(newTask);
-        setNewTaskTitle('');
-        setShowAddTask(false);
+  // Função para obter cores baseadas na posição da coluna
+  const getColumnColors = (position: number) => {
+    const colors = [
+      // Posição 0 - Coleta de assinaturas
+      {
+        bg: 'bg-blue-50',
+        border: 'border-blue-200',
+        header: 'bg-blue-100',
+        text: 'text-blue-800',
+        badge: 'bg-blue-200 text-blue-700'
+      },
+      // Posição 1 - Gravação de vídeo
+      {
+        bg: 'bg-purple-50',
+        border: 'border-purple-200',
+        header: 'bg-purple-100',
+        text: 'text-purple-800',
+        badge: 'bg-purple-200 text-purple-700'
+      },
+      // Posição 2 - Disparo de mensagem
+      {
+        bg: 'bg-green-50',
+        border: 'border-green-200',
+        header: 'bg-green-100',
+        text: 'text-green-800',
+        badge: 'bg-green-200 text-green-700'
+      },
+      // Posição 3 - Apresentar ao poder público
+      {
+        bg: 'bg-orange-50',
+        border: 'border-orange-200',
+        header: 'bg-orange-100',
+        text: 'text-orange-800',
+        badge: 'bg-orange-200 text-orange-700'
+      },
+      // Posição 4 - Aguardar retorno
+      {
+        bg: 'bg-yellow-50',
+        border: 'border-yellow-200',
+        header: 'bg-yellow-100',
+        text: 'text-yellow-800',
+        badge: 'bg-yellow-200 text-yellow-700'
+      },
+      // Posição 5 - Dar retorno à população
+      {
+        bg: 'bg-pink-50',
+        border: 'border-pink-200',
+        header: 'bg-pink-100',
+        text: 'text-pink-800',
+        badge: 'bg-pink-200 text-pink-700'
+      },
+      // Posição 6 - Atividades extras
+      {
+        bg: 'bg-indigo-50',
+        border: 'border-indigo-200',
+        header: 'bg-indigo-100',
+        text: 'text-indigo-800',
+        badge: 'bg-indigo-200 text-indigo-700'
       }
-    } catch (error) {
-      console.error('Error creating task:', error);
-    } finally {
-      setIsCreating(false);
-    }
+    ];
+
+    return colors[position] || colors[0];
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddTask();
-    } else if (e.key === 'Escape') {
-      setShowAddTask(false);
-      setNewTaskTitle('');
-    }
-  };
+  const columnColors = getColumnColors(column.position);
+
+
 
   return (
-    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 min-h-[600px]">
+    <div className={clsx(
+      "rounded-lg p-4 min-h-[600px] border-2",
+      // Modo claro: cores baseadas na posição
+      columnColors.bg,
+      columnColors.border,
+      // Modo escuro: mantém o cinza
+      "dark:bg-gray-800 dark:border-gray-700"
+    )}>
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className={clsx(
+        "flex items-center justify-between mb-4 p-3 rounded-lg",
+        // Modo claro: header colorido
+        columnColors.header,
+        // Modo escuro: mantém o cinza
+        "dark:bg-gray-700"
+      )}>
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className={clsx(
+            "font-semibold",
+            // Modo claro: texto colorido
+            columnColors.text,
+            // Modo escuro: mantém o branco
+            "dark:text-white"
+          )}>
             {column.name}
           </h3>
-          <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded-full">
+          <span className={clsx(
+            "text-xs px-2 py-1 rounded-full",
+            // Modo claro: badge colorido
+            columnColors.badge,
+            // Modo escuro: mantém o cinza
+            "dark:bg-gray-600 dark:text-gray-300"
+          )}>
             {tasks.length}
           </span>
         </div>
         
-        <button className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <button className={clsx(
+          "p-1 hover:bg-white/20 rounded",
+          // Modo claro: ícone colorido
+          columnColors.text,
+          // Modo escuro: mantém o cinza
+          "dark:text-gray-400 dark:hover:text-gray-300"
+        )}>
           <MoreHorizontal size={16} />
         </button>
       </div>
@@ -96,46 +161,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           ))}
         </SortableContext>
 
-        {/* Add Task */}
-        {showAddTask ? (
-          <div className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-            <input
-              type="text"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Título da tarefa..."
-              className="w-full p-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoFocus
-            />
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={handleAddTask}
-                disabled={isCreating || !newTaskTitle.trim()}
-                className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isCreating ? 'Criando...' : 'Adicionar'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowAddTask(false);
-                  setNewTaskTitle('');
-                }}
-                className="px-3 py-1 text-gray-600 dark:text-gray-300 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAddTask(true)}
-            className="w-full flex items-center gap-2 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
-          >
-            <Plus size={16} />
-            <span className="text-sm">Adicionar tarefa</span>
-          </button>
-        )}
       </div>
     </div>
   );

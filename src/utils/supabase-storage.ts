@@ -86,6 +86,15 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   console.log('Petition created successfully:', data);
 
+  // Criar tarefa Kanban automaticamente
+  try {
+    await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
+    console.log('Kanban task created successfully for petition:', data.id);
+  } catch (kanbanError) {
+    console.error('Error creating Kanban task:', kanbanError);
+    // Não falhar a criação do petition se o Kanban falhar
+  }
+
   // Criar tabela específica para as assinaturas
   console.log('Creating signatures table:', tableName);
   
@@ -484,4 +493,69 @@ export const deletePetitionResource = async (id: string): Promise<boolean> => {
     .delete()
     .eq('id', id);
   return !error;
+};
+
+// Função para criar tarefa Kanban automaticamente quando um petition é criado
+const createKanbanTaskForPetition = async (petitionId: string, petitionName: string, petitionDescription: string): Promise<void> => {
+  try {
+    // 1. Buscar board Kanban global
+    const { data: boards, error: boardsError } = await supabase
+      .from('kanban_boards')
+      .select('id')
+      .eq('is_global', true)
+      .limit(1);
+
+    if (boardsError || !boards || boards.length === 0) {
+      console.error('Board Kanban não encontrado:', boardsError);
+      return;
+    }
+
+    const boardId = boards[0].id;
+
+    // 2. Buscar coluna "Coleta de assinaturas"
+    const { data: columns, error: columnsError } = await supabase
+      .from('kanban_columns')
+      .select('id')
+      .eq('board_id', boardId)
+      .eq('name', 'Coleta de assinaturas')
+      .limit(1);
+
+    if (columnsError || !columns || columns.length === 0) {
+      console.error('Coluna "Coleta de assinaturas" não encontrada:', columnsError);
+      return;
+    }
+
+    const columnId = columns[0].id;
+
+    // 3. Buscar usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Usuário não autenticado');
+      return;
+    }
+
+    // 4. Criar tarefa Kanban
+    const { error: taskError } = await supabase
+      .from('kanban_tasks')
+      .insert({
+        board_id: boardId,
+        column_id: columnId,
+        petition_id: petitionId,
+        title: petitionName,
+        description: petitionDescription,
+        priority: 'medium',
+        position: 0,
+        created_by: user.id
+      });
+
+    if (taskError) {
+      console.error('Erro ao criar tarefa Kanban:', taskError);
+      throw taskError;
+    }
+
+    console.log('Tarefa Kanban criada com sucesso para petition:', petitionId);
+  } catch (error) {
+    console.error('Erro na criação da tarefa Kanban:', error);
+    throw error;
+  }
 };

@@ -15,8 +15,8 @@ import { ErrorBoundary } from './utils/error-monitoring';
 
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
+    <ThemeProvider>
+      <ErrorBoundary>
         <AuthProvider>
           <Router>
             <Routes>
@@ -42,8 +42,8 @@ function App() {
             </Routes>
           </Router>
         </AuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 

@@ -15,7 +15,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import clsx from 'clsx';
-// PWANotifications removido para evitar travamentos
+// PWANotifications ativo - notificações de atualização PWA funcionando
 import { useTheme } from '../contexts/ThemeContext';
 
 interface LayoutProps {
