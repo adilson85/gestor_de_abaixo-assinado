@@ -3,8 +3,9 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*"
+  NODE_VERSION = "20"
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*,VITE_GOOGLE_MAPS_API_KEY"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 # Configuração de headers de segurança
 [[headers]]

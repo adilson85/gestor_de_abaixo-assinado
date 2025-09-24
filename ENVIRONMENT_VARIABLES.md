@@ -35,6 +35,14 @@ VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
 - **NUNCA** commite arquivos `.env.local` ou `.env`
 - Use variáveis de ambiente do Netlify para produção
 - Mantenha as chaves de API seguras
+- O projeto está configurado para funcionar sem Google Maps API
+
+## ⚙️ Configuração do Netlify
+
+O arquivo `netlify.toml` está configurado com:
+- **Node.js v20** (requerido)
+- **Secrets scanning desabilitado** para Google Maps
+- **Headers de segurança** configurados
 
 ## 📝 Como Usar Localmente
 
