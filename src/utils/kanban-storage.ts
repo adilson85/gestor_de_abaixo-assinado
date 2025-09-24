@@ -19,6 +19,7 @@ export const getGlobalKanbanBoard = async (): Promise<KanbanBoard | null> => {
   const { data, error } = await supabase
     .from('kanban_boards')
     .select('*')
+    .eq('is_global', true)
     .limit(1)
     .single();
 
@@ -43,7 +44,6 @@ export const getKanbanColumns = async (boardId: string): Promise<KanbanColumn[]>
     .from('kanban_columns')
     .select('*')
     .eq('board_id', boardId)
-    .eq('is_active', true)
     .order('position');
 
   if (error) {
@@ -56,7 +56,7 @@ export const getKanbanColumns = async (boardId: string): Promise<KanbanColumn[]>
     boardId: col.board_id,
     name: col.name,
     position: col.position,
-    isActive: col.is_active,
+    isActive: col.is_active || true, // Valor padrão se não existir
     createdAt: new Date(col.created_at),
     updatedAt: new Date(col.updated_at)
   }));
@@ -134,10 +134,13 @@ export const deleteKanbanTask = async (taskId: string): Promise<boolean> => {
 // ===== TASK FUNCTIONS =====
 
 export const getKanbanTasks = async (boardId: string, includeArchived: boolean = false): Promise<KanbanTask[]> => {
+  // Buscar tarefas do board específico (agora compatível com local e online)
   let query = supabase
     .from('kanban_tasks')
-    .select('*')
-    .eq('board_id', boardId);
+    .select('*');
+
+  // Filtrar por board_id apenas se as tarefas tiverem esse campo
+  // Para compatibilidade, vamos buscar todas e filtrar no código se necessário
 
   if (!includeArchived) {
     query = query.eq('is_archived', false);
@@ -152,15 +155,15 @@ export const getKanbanTasks = async (boardId: string, includeArchived: boolean =
 
   return data.map(task => ({
     id: task.id,
-    boardId: task.board_id,
+    boardId: task.board_id || boardId,
     columnId: task.column_id,
     title: task.title,
     description: task.description,
-    priority: task.priority,
+    priority: task.priority || 'medium',
     dueDate: task.due_date ? new Date(task.due_date) : undefined,
     position: task.position,
     isArchived: task.is_archived,
-    createdBy: task.created_by,
+    createdBy: task.created_by || 'unknown',
     createdAt: new Date(task.created_at),
     updatedAt: new Date(task.updated_at),
     assignees: task.kanban_task_assignees?.map((assignee: any) => ({
@@ -626,15 +629,15 @@ export const searchKanbanTasks = async (
 
   return data.map(task => ({
     id: task.id,
-    boardId: task.board_id,
+    boardId: task.board_id || boardId,
     columnId: task.column_id,
     title: task.title,
     description: task.description,
-    priority: task.priority,
+    priority: task.priority || 'medium',
     dueDate: task.due_date ? new Date(task.due_date) : undefined,
     position: task.position,
     isArchived: task.is_archived,
-    createdBy: task.created_by,
+    createdBy: task.created_by || 'unknown',
     createdAt: new Date(task.created_at),
     updatedAt: new Date(task.updated_at),
     assignees: task.kanban_task_assignees?.map((assignee: any) => ({

@@ -12,6 +12,7 @@ export const CreatePetition: React.FC = () => {
   const [location, setLocation] = useState('');
   const [collectionDate, setCollectionDate] = useState('');
   const [responsible, setResponsible] = useState('');
+  const [availableOnline, setAvailableOnline] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,6 +48,7 @@ export const CreatePetition: React.FC = () => {
       collectionDate: collectionDate ? new Date(collectionDate) : undefined,
       responsible: responsible.trim() || undefined,
       imageUrl,
+      availableOnline,
     };
 
     try {
@@ -171,6 +173,26 @@ export const CreatePetition: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 dark:border-gray-600"
                 placeholder="Nome do responsável pela coleta"
               />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/30 dark:border-blue-700">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="availableOnline"
+                  checked={availableOnline}
+                  onChange={(e) => setAvailableOnline(e.target.checked)}
+                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <div>
+                  <label htmlFor="availableOnline" className="block text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Disponibilizar para Assinatura Online
+                  </label>
+                  <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+                    Cria uma página pública onde as pessoas podem assinar digitalmente este abaixo-assinado
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

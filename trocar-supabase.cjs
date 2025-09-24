@@ -46,8 +46,15 @@ function mostrarStatus() {
   console.log('📊 STATUS ATUAL:');
   
   if (fs.existsSync(ENV_LOCAL)) {
-    console.log('🌐 Usando: SUPABASE ONLINE');
-    console.log('📍 Arquivo: .env.local existe');
+    // Verificar se é configuração local ou online pelo conteúdo
+    const conteudo = fs.readFileSync(ENV_LOCAL, 'utf8');
+    if (conteudo.includes('127.0.0.1:54331')) {
+      console.log('🏠 Usando: SUPABASE LOCAL');
+      console.log('📍 Arquivo: .env.local (configuração local)');
+    } else {
+      console.log('🌐 Usando: SUPABASE ONLINE');
+      console.log('📍 Arquivo: .env.local (configuração online)');
+    }
   } else {
     console.log('🏠 Usando: SUPABASE LOCAL');
     console.log('📍 Usando configurações padrão do código');

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Eye, ExternalLink, Calendar, Users } from 'lucide-react';
+import { Plus, Eye, ExternalLink, Calendar, Users, Trash2 } from 'lucide-react';
 import { SearchFilter } from '../components/SearchFilter';
 import { Pagination } from '../components/Pagination';
-import { getPetitions, getSignatureCount } from '../utils/supabase-storage';
+import { getPetitions, getSignatureCount, deletePetition } from '../utils/supabase-storage';
 import { Petition } from '../types';
 
 export const PetitionList: React.FC = () => {
@@ -15,6 +15,7 @@ export const PetitionList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -45,6 +46,34 @@ export const PetitionList: React.FC = () => {
 
     loadData();
   }, []);
+
+  const handleDeletePetition = async (petitionId: string, petitionName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o abaixo-assinado "${petitionName}"?\n\nEsta ação não pode ser desfeita e todas as assinaturas serão perdidas.`)) {
+      return;
+    }
+
+    setDeletingId(petitionId);
+    try {
+      const success = await deletePetition(petitionId);
+      if (success) {
+        // Remover da lista local
+        setPetitions(prev => prev.filter(p => p.id !== petitionId));
+        // Remover contagem de assinaturas
+        setSignatureCounts(prev => {
+          const newCounts = { ...prev };
+          delete newCounts[petitionId];
+          return newCounts;
+        });
+      } else {
+        alert('Erro ao excluir o abaixo-assinado. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Error deleting petition:', error);
+      alert('Erro ao excluir o abaixo-assinado. Tente novamente.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const uniqueLocations = Array.from(new Set(petitions.map(p => p.location).filter(Boolean))).sort();
 
@@ -233,13 +262,18 @@ export const PetitionList: React.FC = () => {
                           className="flex items-center justify-end gap-2"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Link
-                            to={`/petitions/${petition.id}`}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            title="Ver detalhes"
+                          <button
+                            onClick={() => handleDeletePetition(petition.id, petition.name)}
+                            disabled={deletingId === petition.id}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Excluir abaixo-assinado"
                           >
-                            <Eye size={16} />
-                          </Link>
+                            {deletingId === petition.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </button>
                         </div>
                       </td>
                     </tr>

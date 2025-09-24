@@ -11,6 +11,7 @@ import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
 import { Tasks } from './pages/Tasks';
 import { Settings } from './pages/Settings';
+import { PublicPetition } from './pages/PublicPetition';
 import { ErrorBoundary } from './utils/error-monitoring';
 
 function App() {
@@ -20,8 +21,9 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
-              {/* Login route */}
+              {/* Public routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/petition/:slug" element={<PublicPetition />} />
               
               {/* Protected application routes */}
               <Route path="/*" element={

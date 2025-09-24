@@ -1,6 +1,15 @@
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Create function to update updated_at column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create petitions table
 CREATE TABLE IF NOT EXISTS public.petitions (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -14,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.petitions (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     image_url text,
+    available_online boolean DEFAULT false,
     CONSTRAINT petitions_pkey PRIMARY KEY (id),
     CONSTRAINT petitions_slug_key UNIQUE (slug),
     CONSTRAINT petitions_table_name_key UNIQUE (table_name)
@@ -55,7 +65,8 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 -- Create kanban_boards table
 CREATE TABLE IF NOT EXISTS public.kanban_boards (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
-    name text NOT NULL,
+    name character varying(255) NOT NULL DEFAULT 'Tarefas Globais'::character varying,
+    is_global boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     CONSTRAINT kanban_boards_pkey PRIMARY KEY (id)
@@ -76,16 +87,23 @@ CREATE TABLE IF NOT EXISTS public.kanban_columns (
 -- Create kanban_tasks table
 CREATE TABLE IF NOT EXISTS public.kanban_tasks (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
+    board_id uuid NOT NULL,
     column_id uuid NOT NULL,
+    petition_id uuid,
     title text NOT NULL,
     description text,
+    priority text DEFAULT 'medium',
     position integer NOT NULL DEFAULT 0,
     due_date timestamp with time zone,
     is_archived boolean DEFAULT false,
+    created_by uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     CONSTRAINT kanban_tasks_pkey PRIMARY KEY (id),
-    CONSTRAINT kanban_tasks_column_id_fkey FOREIGN KEY (column_id) REFERENCES kanban_columns (id) ON DELETE CASCADE
+    CONSTRAINT kanban_tasks_board_id_fkey FOREIGN KEY (board_id) REFERENCES kanban_boards (id) ON DELETE CASCADE,
+    CONSTRAINT kanban_tasks_column_id_fkey FOREIGN KEY (column_id) REFERENCES kanban_columns (id) ON DELETE CASCADE,
+    CONSTRAINT kanban_tasks_petition_id_fkey FOREIGN KEY (petition_id) REFERENCES petitions (id) ON DELETE SET NULL,
+    CONSTRAINT kanban_tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users (id) ON DELETE CASCADE
 ) TABLESPACE pg_default;
 
 -- Create kanban_task_assignees table
@@ -164,6 +182,10 @@ CREATE TABLE IF NOT EXISTS public.kanban_activities (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_kanban_columns_board_id ON public.kanban_columns USING btree (board_id);
 CREATE INDEX IF NOT EXISTS idx_kanban_tasks_column_id ON public.kanban_tasks USING btree (column_id);
+CREATE INDEX IF NOT EXISTS idx_kanban_tasks_board_id ON public.kanban_tasks USING btree (board_id);
+CREATE INDEX IF NOT EXISTS idx_kanban_tasks_position ON public.kanban_tasks USING btree (column_id, position);
+CREATE INDEX IF NOT EXISTS idx_kanban_tasks_due_date ON public.kanban_tasks USING btree (due_date);
+CREATE INDEX IF NOT EXISTS idx_kanban_tasks_archived ON public.kanban_tasks USING btree (is_archived);
 CREATE INDEX IF NOT EXISTS idx_kanban_task_assignees_task_id ON public.kanban_task_assignees USING btree (task_id);
 CREATE INDEX IF NOT EXISTS idx_kanban_checklists_task_id ON public.kanban_checklists USING btree (task_id);
 CREATE INDEX IF NOT EXISTS idx_kanban_checklist_items_checklist_id ON public.kanban_checklist_items USING btree (checklist_id);
@@ -250,6 +272,23 @@ CREATE POLICY "Enable read access for authenticated users" ON public.kanban_comm
 CREATE POLICY "Enable insert for authenticated users" ON public.kanban_comments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Enable update for own comments" ON public.kanban_comments FOR UPDATE USING (auth.uid() = author_id);
 CREATE POLICY "Enable delete for own comments" ON public.kanban_comments FOR DELETE USING (auth.uid() = author_id);
+
+-- Create triggers for updated_at columns
+CREATE TRIGGER update_kanban_boards_updated_at 
+    BEFORE UPDATE ON public.kanban_boards 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_kanban_columns_updated_at 
+    BEFORE UPDATE ON public.kanban_columns 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_kanban_tasks_updated_at 
+    BEFORE UPDATE ON public.kanban_tasks 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_kanban_comments_updated_at 
+    BEFORE UPDATE ON public.kanban_comments 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create RLS policies for kanban_activities
 CREATE POLICY "Enable read access for authenticated users" ON public.kanban_activities FOR SELECT USING (auth.role() = 'authenticated');

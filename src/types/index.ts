@@ -7,6 +7,7 @@ export interface Petition {
   collectionDate?: Date; // Data da coleta física
   responsible?: string; // Responsável pela coleta
   imageUrl?: string; // URL da imagem do abaixo-assinado físico
+  availableOnline?: boolean; // Se está disponível para assinatura online
   tableName: string; // Nome da tabela específica no Supabase
   createdAt: Date;
   updatedAt: Date;

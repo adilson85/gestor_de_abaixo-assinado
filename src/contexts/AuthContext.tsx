@@ -37,7 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Lista hardcoded de admins para contornar problemas de RLS
         const adminUserIds = [
           '624c6a0e-87d9-4005-9f08-9953e8860ad4', // matheus.mira@cvj.sc.gov.br
-          '24151887-fefb-44fe-a2e3-1eef585a9468'  // adilson.martins.jlle@gmail.com
+          '24151887-fefb-44fe-a2e3-1eef585a9468', // adilson.martins.jlle@gmail.com
+          'a1b02a97-c26e-4457-a4d2-046380c1c05a'  // admin@teste.com (Supabase Local - ID atual)
         ];
         
         const isAdminUser = adminUserIds.includes(userId);

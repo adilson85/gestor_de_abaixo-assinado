@@ -23,6 +23,7 @@ export const getPetitions = async (): Promise<Petition[]> => {
     collectionDate: petition.collection_date ? new Date(petition.collection_date) : undefined,
     responsible: petition.responsible || undefined,
     imageUrl: petition.image_url || undefined,
+    availableOnline: petition.available_online || false,
     tableName: petition.table_name,
     createdAt: new Date(petition.created_at),
     updatedAt: new Date(petition.updated_at),
@@ -50,6 +51,35 @@ export const getPetitionById = async (id: string): Promise<Petition | null> => {
     collectionDate: data.collection_date ? new Date(data.collection_date) : undefined,
     responsible: data.responsible || undefined,
     imageUrl: data.image_url || undefined,
+    availableOnline: data.available_online || false,
+    tableName: data.table_name,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
+};
+
+export const getPetitionBySlug = async (slug: string): Promise<Petition | null> => {
+  const { data, error } = await supabase
+    .from('petitions')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching petition by slug:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    slug: data.slug,
+    name: data.name,
+    description: data.description || undefined,
+    location: data.location || undefined,
+    collectionDate: data.collection_date ? new Date(data.collection_date) : undefined,
+    responsible: data.responsible || undefined,
+    imageUrl: data.image_url || undefined,
+    availableOnline: data.available_online || false,
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
@@ -68,6 +98,7 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
     collection_date: petition.collectionDate ? petition.collectionDate.toISOString().split('T')[0] : null,
     responsible: petition.responsible || null,
     image_url: petition.imageUrl || null,
+    available_online: petition.availableOnline || false,
     table_name: tableName,
   };
 
@@ -164,6 +195,7 @@ FOR DELETE USING (auth.role() = 'authenticated');
     collectionDate: data.collection_date ? new Date(data.collection_date) : undefined,
     responsible: data.responsible || undefined,
     imageUrl: data.image_url || undefined,
+    availableOnline: data.available_online || false,
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
@@ -178,6 +210,7 @@ export const updatePetition = async (id: string, updates: Partial<Petition>): Pr
     collection_date: updates.collectionDate ? updates.collectionDate.toISOString().split('T')[0] : null,
     responsible: updates.responsible || null,
     image_url: updates.imageUrl || null,
+    available_online: updates.availableOnline,
     updated_at: new Date().toISOString(),
   };
 
@@ -202,6 +235,7 @@ export const updatePetition = async (id: string, updates: Partial<Petition>): Pr
     collectionDate: data.collection_date ? new Date(data.collection_date) : undefined,
     responsible: data.responsible || undefined,
     imageUrl: data.image_url || undefined,
+    availableOnline: data.available_online || false,
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
@@ -430,6 +464,20 @@ export const updateSignature = async (
     mensagemEnviada: data.mensagem_enviada || false,
     createdAt: new Date(data.created_at),
   };
+};
+
+export const deleteSignature = async (signatureId: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('signatures')
+    .delete()
+    .eq('id', signatureId);
+
+  if (error) {
+    console.error('Error deleting signature:', error);
+    return false;
+  }
+
+  return true;
 };
 
 // Resources (YouTube / Drive / Link)
