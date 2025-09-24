@@ -4,17 +4,6 @@
 
 [build.environment]
   NODE_VERSION = "18"
-
-# Configuração para ignorar detecção de secrets do Google Maps
-[build.processing]
-  skip_processing = false
-
-# Configuração de secrets scanning
-[build.processing.skip_processing]
-  skip_processing = false
-
-# Variáveis de ambiente que podem conter secrets esperados
-[build.environment]
   SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*"
 
 # Configuração de headers de segurança
