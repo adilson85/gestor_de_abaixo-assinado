@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 
 interface AddressAutocompleteProps {
   value: string;
@@ -33,7 +32,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   useEffect(() => {
     // Verificar se a API key está disponível
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === 'undefined' || apiKey === '') {
       setApiKeyAvailable(false);
       setError('Google Maps API key não configurada. Use a busca por CEP como alternativa.');
       return;
@@ -45,6 +44,9 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         setIsLoading(true);
         setError(null);
 
+        // Importação dinâmica para evitar que a chave seja incluída no build
+        const { Loader } = await import('@googlemaps/js-api-loader');
+        
         const loader = new Loader({
           apiKey: apiKey,
           version: 'weekly',
@@ -56,8 +58,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         if (inputRef.current && !autocompleteRef.current) {
           autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
             types: ['address'],
-            componentRestrictions: { country: 'br' }, // Restringir ao Brasil
-            fields: ['address_components', 'formatted_address', 'geometry']
+            componentRestrictions: { country: 'br' }
           });
 
           autocompleteRef.current.addListener('place_changed', () => {
@@ -78,54 +79,59 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                 
                 if (types.includes('route')) {
                   street = component.long_name;
-                } else if (types.includes('street_number')) {
+                }
+                if (types.includes('street_number')) {
                   streetNumber = component.long_name;
-                } else if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) {
+                }
+                if (types.includes('sublocality') || types.includes('sublocality_level_1')) {
                   neighborhood = component.long_name;
-                } else if (types.includes('administrative_area_level_2') || types.includes('locality')) {
+                }
+                if (types.includes('administrative_area_level_2')) {
                   city = component.long_name;
-                } else if (types.includes('administrative_area_level_1')) {
+                }
+                if (types.includes('administrative_area_level_1')) {
                   state = component.short_name;
-                } else if (types.includes('postal_code')) {
+                }
+                if (types.includes('postal_code')) {
                   zipCode = component.long_name;
                 }
               });
 
-              // Fallback para bairro se não encontrado
+              // Se não encontrou bairro, tentar usar sublocality_level_2
               if (!neighborhood) {
-                const sublocality = addressComponents.find(comp => 
-                  comp.types.includes('sublocality') || comp.types.includes('sublocality_level_1')
+                const sublocality2 = addressComponents.find(comp => 
+                  comp.types.includes('sublocality_level_2')
                 );
-                if (sublocality) {
-                  neighborhood = sublocality.long_name;
+                if (sublocality2) {
+                  neighborhood = sublocality2.long_name;
                 }
               }
 
-              // Combinar rua e número
-              const fullStreet = streetNumber ? `${street}, ${streetNumber}` : street;
-
-              const addressData = {
-                street: fullStreet,
+              console.log('Endereço extraído:', {
+                street,
+                streetNumber,
                 neighborhood,
                 city,
                 state,
                 zipCode
-              };
+              });
 
-              console.log('Dados extraídos do Google Places:', addressData);
               console.log('Componentes do endereço:', addressComponents);
 
-              // Chamar callback com os dados do endereço
-              onAddressSelect(addressData);
-
-              // Atualizar o valor do input
-              onChange(place.formatted_address || '');
+              // Chamar callback com os dados extraídos
+              onAddressSelect({
+                street: streetNumber ? `${street}, ${streetNumber}` : street,
+                neighborhood,
+                city,
+                state,
+                zipCode
+              });
             }
           });
         }
       } catch (err) {
-        console.error('Erro ao carregar Google Places API:', err);
-        setError('Erro ao carregar autocomplete de endereços');
+        console.error('Erro ao carregar Google Maps:', err);
+        setError('Erro ao carregar Google Maps. Use a busca por CEP como alternativa.');
       } finally {
         setIsLoading(false);
       }
@@ -133,7 +139,6 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
     initializeGooglePlaces();
 
-    // Cleanup
     return () => {
       if (autocompleteRef.current) {
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
