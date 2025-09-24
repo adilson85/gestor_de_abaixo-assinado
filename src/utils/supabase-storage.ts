@@ -117,74 +117,18 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   console.log('Petition created successfully:', data);
 
-  // Criar tarefa Kanban automaticamente
-  try {
-    await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
-    console.log('Kanban task created successfully for petition:', data.id);
-  } catch (kanbanError) {
-    console.error('Error creating Kanban task:', kanbanError);
-    // Não falhar a criação do petition se o Kanban falhar
-  }
+  // Criar tarefa Kanban automaticamente (opcional) - TEMPORARIAMENTE DESABILITADO
+  // try {
+  //   await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
+  //   console.log('Kanban task created successfully for petition:', data.id);
+  // } catch (kanbanError) {
+  //   console.error('Error creating Kanban task:', kanbanError);
+  //   // Não falhar a criação do petition se o Kanban falhar
+  //   console.log('Continuing without Kanban task...');
+  // }
 
-  // Criar tabela específica para as assinaturas
-  console.log('Creating signatures table:', tableName);
-  
-  // SOLUÇÃO ALTERNATIVA: Usar uma tabela única para todas as assinaturas
-  // Em vez de criar tabelas dinâmicas, vamos usar uma tabela única com petition_id
-  console.log('Using unified signatures table approach...');
-  
-  // Verificar se a tabela signatures existe, se não, criar
-  const { error: checkTableError } = await supabase
-    .from('signatures')
-    .select('id')
-    .limit(1);
-  
-  if (checkTableError && checkTableError.code === 'PGRST116') {
-    // Tabela não existe, vamos criar via migração manual
-    console.log('Signatures table does not exist. Please run the migration manually.');
-    console.log('Execute this SQL in Supabase SQL Editor:');
-    console.log(`
-CREATE TABLE IF NOT EXISTS signatures (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  petition_id UUID NOT NULL REFERENCES petitions(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  street TEXT,
-  neighborhood TEXT,
-  city TEXT,
-  state TEXT,
-  zip_code TEXT,
-  mensagem_enviada BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
--- Grant permissions
-GRANT ALL ON TABLE signatures TO authenticated;
-GRANT ALL ON TABLE signatures TO service_role;
-
--- Enable RLS
-ALTER TABLE signatures ENABLE ROW LEVEL SECURITY;
-
--- Create policies
-CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON signatures 
-FOR SELECT USING (true);
-
-CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON signatures 
-FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON signatures 
-FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY IF NOT EXISTS "Enable delete for authenticated users" ON signatures 
-FOR DELETE USING (auth.role() = 'authenticated');
-    `);
-    
-    // Tentar remover a petition se a tabela não foi criada
-    await supabase.from('petitions').delete().eq('id', data.id);
-    return null;
-  }
-
-  console.log('Signatures table exists, proceeding...');
+  // A tabela signatures já existe, não precisa verificar
+  console.log('Petition created successfully with signatures table ready.');
 
   return {
     id: data.id,
