@@ -23,7 +23,7 @@ export const getPetitions = async (): Promise<Petition[]> => {
     collectionDate: petition.collection_date ? new Date(petition.collection_date) : undefined,
     responsible: petition.responsible || undefined,
     imageUrl: petition.image_url || undefined,
-    availableOnline: petition.available_online || false,
+    availableOnline: data.available_online || false,
     tableName: petition.table_name,
     createdAt: new Date(petition.created_at),
     updatedAt: new Date(petition.updated_at),
