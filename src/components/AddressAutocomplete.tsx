@@ -28,19 +28,22 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyAvailable, setApiKeyAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Verificar se a API key está disponível
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      setApiKeyAvailable(false);
+      setError('Google Maps API key não configurada. Use a busca por CEP como alternativa.');
+      return;
+    }
+    setApiKeyAvailable(true);
+
     const initializeGooglePlaces = async () => {
       try {
         setIsLoading(true);
         setError(null);
-
-        // Verificar se a API key está configurada
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-          setError('Google Maps API key não configurada');
-          return;
-        }
 
         const loader = new Loader({
           apiKey: apiKey,
@@ -138,6 +141,25 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       }
     };
   }, [onChange, onAddressSelect]);
+
+  // Se a API key não estiver disponível, renderizar um input simples
+  if (apiKeyAvailable === false) {
+    return (
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Digite o endereço manualmente..."
+          disabled={disabled}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 border-gray-300 dark:border-gray-600 ${className}`}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Google Maps não configurado. Digite o endereço manualmente.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
