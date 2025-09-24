@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 interface AddressAutocompleteProps {
   value: string;
@@ -15,7 +15,7 @@ interface AddressAutocompleteProps {
   disabled?: boolean;
 }
 
-export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
+export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = React.memo(({
   value,
   onChange,
   onAddressSelect,
@@ -28,6 +28,17 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiKeyAvailable, setApiKeyAvailable] = useState<boolean | null>(null);
+
+  // Memoizar o callback para evitar re-renderizações
+  const handleAddressSelect = useCallback((address: {
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  }) => {
+    onAddressSelect(address);
+  }, [onAddressSelect]);
 
   useEffect(() => {
     // Verificar se a API key está disponível
@@ -119,7 +130,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
               console.log('Componentes do endereço:', addressComponents);
 
               // Chamar callback com os dados extraídos
-              onAddressSelect({
+              handleAddressSelect({
                 street: streetNumber ? `${street}, ${streetNumber}` : street,
                 neighborhood,
                 city,
@@ -145,7 +156,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         autocompleteRef.current = null;
       }
     };
-  }, [onChange, onAddressSelect]);
+  }, []); // Remover dependências para evitar re-renderizações
 
   // Se a API key não estiver disponível, renderizar um input simples
   if (apiKeyAvailable === false) {
@@ -197,4 +208,4 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       )}
     </div>
   );
-};
+});
