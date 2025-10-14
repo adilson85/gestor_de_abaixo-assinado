@@ -21,3 +21,14 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Configuração de cache para ícones PWA
+[[headers]]
+  for = "/icon-*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
