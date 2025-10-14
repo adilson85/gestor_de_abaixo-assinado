@@ -74,7 +74,7 @@ export const Login: React.FC = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <img 
-            src="/icone_abaixo-assinado.png" 
+            src={theme === 'dark' ? "/icone_abaixo-assinado.png" : "/icone_abaixo-assinado_branco.png"} 
             alt="Ícone Abaixo-Assinado" 
             className="w-20 h-20 object-contain"
           />
