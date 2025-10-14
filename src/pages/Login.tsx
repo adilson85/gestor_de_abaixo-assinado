@@ -73,8 +73,12 @@ export const Login: React.FC = () => {
       </button>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="bg-blue-600 p-3 rounded-lg">
-            <LogIn size={32} className="text-white" />
+          <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+            <img 
+              src="/logo_abaixo-assinado.png" 
+              alt="Logo Abaixo-Assinado" 
+              className="w-12 h-12 object-contain"
+            />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
