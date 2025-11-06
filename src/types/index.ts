@@ -64,6 +64,7 @@ export interface KanbanTask {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  petitionId?: string;
   assignees?: KanbanTaskAssignee[];
   labels?: KanbanTaskLabel[];
   checklists?: KanbanChecklist[];

@@ -44,13 +44,20 @@ SET created_by = (SELECT id FROM auth.users LIMIT 1)
 WHERE created_by IS NULL;
 
 -- 5. Adicionar foreign keys após popular os dados
-ALTER TABLE public.kanban_tasks 
-ADD CONSTRAINT IF NOT EXISTS kanban_tasks_board_id_fkey 
-FOREIGN KEY (board_id) REFERENCES public.kanban_boards(id) ON DELETE CASCADE;
-
-ALTER TABLE public.kanban_tasks 
-ADD CONSTRAINT IF NOT EXISTS kanban_tasks_petition_id_fkey 
-FOREIGN KEY (petition_id) REFERENCES public.petitions(id) ON DELETE SET NULL;
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'kanban_tasks_board_id_fkey') THEN
+        ALTER TABLE public.kanban_tasks 
+        ADD CONSTRAINT kanban_tasks_board_id_fkey 
+        FOREIGN KEY (board_id) REFERENCES public.kanban_boards(id) ON DELETE CASCADE;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'kanban_tasks_petition_id_fkey') THEN
+        ALTER TABLE public.kanban_tasks 
+        ADD CONSTRAINT kanban_tasks_petition_id_fkey 
+        FOREIGN KEY (petition_id) REFERENCES public.petitions(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 6. Criar tabelas extras que existem no online
 CREATE TABLE IF NOT EXISTS public.kanban_labels (

@@ -166,6 +166,7 @@ export const getKanbanTasks = async (boardId: string, includeArchived: boolean =
     createdBy: task.created_by || 'unknown',
     createdAt: new Date(task.created_at),
     updatedAt: new Date(task.updated_at),
+    petitionId: task.petition_id || undefined,
     assignees: task.kanban_task_assignees?.map((assignee: any) => ({
       id: assignee.id,
       taskId: task.id,
@@ -267,6 +268,7 @@ export const createKanbanTask = async (
     dueDate: data.due_date ? new Date(data.due_date) : undefined,
     position: data.position,
     isArchived: data.is_archived,
+    petitionId: data.petition_id || undefined,
     createdBy: data.created_by,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at)
@@ -640,6 +642,7 @@ export const searchKanbanTasks = async (
     createdBy: task.created_by || 'unknown',
     createdAt: new Date(task.created_at),
     updatedAt: new Date(task.updated_at),
+    petitionId: task.petition_id || undefined,
     assignees: task.kanban_task_assignees?.map((assignee: any) => ({
       id: assignee.id,
       taskId: task.id,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   X, 
   Calendar, 
@@ -13,7 +14,8 @@ import {
   Plus,
   Edit3,
   Trash2,
-  Archive
+  Archive,
+  ExternalLink
 } from 'lucide-react';
 import { KanbanTask, KanbanLabel, KanbanChecklistItem } from '../types';
 import { 
@@ -55,6 +57,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   onDelete,
   boardId
 }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
@@ -566,6 +569,23 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Botão para acessar abaixo-assinado - Acima do Checklist */}
+              {editedTask.petitionId && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => {
+                      navigate(`/petitions/${editedTask.petitionId}`);
+                      onClose();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                    title="Acessar abaixo-assinado completo"
+                  >
+                    <ExternalLink size={16} />
+                    Acessar Abaixo-Assinado
+                  </button>
+                </div>
+              )}
 
               {/* Checklist */}
               <div>

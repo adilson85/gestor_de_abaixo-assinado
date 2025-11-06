@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { KanbanTask } from '../types';
@@ -10,7 +11,8 @@ import {
   MessageSquare,
   AlertCircle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  ExternalLink
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -20,6 +22,7 @@ interface KanbanTaskCardProps {
 }
 
 export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick }) => {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -170,6 +173,23 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
         <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
           {task.description}
         </p>
+      )}
+
+      {/* Botão para acessar abaixo-assinado - Dentro do card */}
+      {task.petitionId && (
+        <div className="mb-3">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/petitions/${task.petitionId}`);
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors shadow-sm"
+            title="Acessar abaixo-assinado completo"
+          >
+            <ExternalLink size={14} />
+            Acessar Abaixo-Assinado
+          </button>
+        </div>
       )}
 
       {/* Due Date */}
