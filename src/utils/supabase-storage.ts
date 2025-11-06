@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Petition, Signature } from '../types';
+import { Petition, Signature, PetitionResource } from '../types';
 import { generateSlug } from './validation';
 
 // Petitions
@@ -467,7 +467,23 @@ export const addPetitionResource = async (petitionId: string, resource: Omit<Pet
     .select()
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('Error adding petition resource:', error);
+    // Se a tabela não existe, o erro será PGRST116
+    if (error.code === 'PGRST116') {
+      throw new Error('A tabela petition_resources não existe no banco de dados. Execute a migração 20250120000000_create_petition_resources.sql');
+    }
+    // Se for erro de RLS
+    if (error.code === '42501') {
+      throw new Error('Você não tem permissão para adicionar links. Verifique se está autenticado como administrador.');
+    }
+    // Outros erros
+    throw new Error(error.message || 'Erro ao adicionar o link');
+  }
+
+  if (!data) {
+    throw new Error('Nenhum dado retornado ao adicionar o link');
+  }
 
   return {
     id: data.id,

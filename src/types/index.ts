@@ -32,6 +32,15 @@ export interface ValidationError {
   message: string;
 }
 
+export interface PetitionResource {
+  id: string;
+  petitionId: string;
+  type: 'youtube' | 'drive' | 'link';
+  title?: string;
+  url: string;
+  createdAt: Date;
+}
+
 // Kanban Types
 export interface KanbanBoard {
   id: string;

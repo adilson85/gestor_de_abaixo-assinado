@@ -34,7 +34,7 @@ import {
 } from '../utils/supabase-storage';
 import { generateBotConversaUrl, isValidWhatsAppNumber } from '../utils/whatsapp-utils';
 import { exportToCSV } from '../utils/export';
-import { Petition, Signature } from '../types';
+import { Petition, Signature, PetitionResource } from '../types';
 import { validateName, validatePhone, validateState, validateZipCode, normalizePhone, formatPhone } from '../utils/validation';
 import { fetchAddressByCEP, formatCEP } from '../utils/cep';
 import { Pagination } from '../components/Pagination';
@@ -79,10 +79,12 @@ export const PetitionDetail: React.FC = () => {
   const [addressInput, setAddressInput] = useState('');
 
   // Links
-  const [resources, setResources] = useState<any[]>([]);
+  const [resources, setResources] = useState<PetitionResource[]>([]);
   const [newResourceTitle, setNewResourceTitle] = useState('');
   const [newResourceUrl, setNewResourceUrl] = useState('');
   const [newResourceType, setNewResourceType] = useState<'youtube' | 'drive' | 'link'>('link');
+  const [resourceError, setResourceError] = useState<string>('');
+  const [isAddingResource, setIsAddingResource] = useState(false);
 
   // Settings form state
   const [isLoadingCEP, setIsLoadingCEP] = useState(false);
@@ -973,16 +975,44 @@ export const PetitionDetail: React.FC = () => {
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!newResourceUrl.trim()) return;
-              const created = await addPetitionResource(petition.id, {
-                type: newResourceType,
-                title: newResourceTitle.trim() || undefined,
-                url: newResourceUrl.trim(),
-              });
-              if (created) {
-                setResources((prev) => [created, ...prev]);
-                setNewResourceTitle('');
-                setNewResourceUrl('');
+              setResourceError('');
+              
+              if (!newResourceUrl.trim()) {
+                setResourceError('Por favor, informe a URL do link');
+                return;
+              }
+
+              // Validar URL básica
+              try {
+                new URL(newResourceUrl.trim());
+              } catch {
+                setResourceError('URL inválida. Por favor, verifique o formato da URL');
+                return;
+              }
+
+              setIsAddingResource(true);
+              
+              try {
+                const created = await addPetitionResource(petition.id, {
+                  type: newResourceType,
+                  title: newResourceTitle.trim() || undefined,
+                  url: newResourceUrl.trim(),
+                });
+                
+                if (created) {
+                  setResources((prev) => [created, ...prev]);
+                  setNewResourceTitle('');
+                  setNewResourceUrl('');
+                  setNewResourceType('link');
+                  setResourceError('');
+                } else {
+                  setResourceError('Erro ao adicionar o link. Verifique se você tem permissão ou se a tabela existe no banco de dados.');
+                }
+              } catch (error: any) {
+                console.error('Error adding resource:', error);
+                setResourceError(error?.message || 'Erro ao adicionar o link. Tente novamente.');
+              } finally {
+                setIsAddingResource(false);
               }
             }}
             className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6"
@@ -1022,8 +1052,26 @@ export const PetitionDetail: React.FC = () => {
                 />
               </div>
             </div>
+            {resourceError && (
+              <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{resourceError}</p>
+              </div>
+            )}
             <div className="mt-4 flex justify-end">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Adicionar</button>
+              <button 
+                type="submit"
+                disabled={isAddingResource || !newResourceUrl.trim()}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isAddingResource ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Adicionando...
+                  </>
+                ) : (
+                  'Adicionar'
+                )}
+              </button>
             </div>
           </form>
 
