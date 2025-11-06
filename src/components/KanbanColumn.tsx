@@ -96,16 +96,16 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
   return (
     <div className={clsx(
-      "rounded-lg p-4 min-h-[600px] border-2",
+      "rounded-lg border-2 flex flex-col h-full max-h-[calc(100vh-200px)]",
       // Modo claro: cores baseadas na posição
       columnColors.bg,
       columnColors.border,
       // Modo escuro: mantém o cinza
       "dark:bg-gray-800 dark:border-gray-700"
     )}>
-      {/* Column Header */}
+      {/* Column Header - Sticky */}
       <div className={clsx(
-        "flex items-center justify-between mb-4 p-3 rounded-lg",
+        "flex items-center justify-between p-3 rounded-t-lg sticky top-0 z-10 flex-shrink-0",
         // Modo claro: header colorido
         columnColors.header,
         // Modo escuro: mantém o cinza
@@ -143,10 +143,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </button>
       </div>
 
-      {/* Tasks Container */}
+      {/* Tasks Container - Scrollable */}
       <div
         ref={setNodeRef}
-        className="space-y-3 min-h-[400px]"
+        className="space-y-3 p-4 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ 
+          maxHeight: 'calc(100vh - 280px)',
+          scrollbarWidth: 'thin'
+        }}
       >
         <SortableContext
           items={tasks.map(task => task.id)}

@@ -322,16 +322,16 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = ({ petitionId })
 
 
       {/* Board */}
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 min-w-max pb-4">
+          <div className="flex gap-4 min-w-max pb-4 h-full items-start">
             {columns.map(column => (
-              <div key={column.id} className="flex-shrink-0 w-80">
+              <div key={column.id} className="flex-shrink-0 w-80 h-full">
                 <KanbanColumn
                   column={column}
                   tasks={getTasksForColumn(column.id)}
