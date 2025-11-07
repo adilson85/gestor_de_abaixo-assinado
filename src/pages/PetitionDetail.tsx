@@ -20,7 +20,8 @@ import {
   CheckCircle,
   XCircle,
   FileText,
-  Trash2
+  Trash2,
+  Copy
 } from 'lucide-react';
 import { 
   getPetitionById, 
@@ -697,7 +698,20 @@ export const PetitionDetail: React.FC = () => {
               {petition.collectionDate && (
                 <span className="flex items-center gap-1">
                   <Calendar size={16} />
-                  Coletado em {petition.collectionDate.toLocaleDateString('pt-BR')}
+                  Coletado em {petition.collectionDate.toLocaleDateString('pt-BR')} - como ID: 
+                  <span className="flex items-center gap-1 ml-1">
+                    {petition.id}
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(petition.id);
+                        alert('ID copiado para a área de transferência!');
+                      }}
+                      className="ml-1 p-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Copiar ID"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </span>
                 </span>
               )}
             </div>
