@@ -31,7 +31,9 @@ import {
   checkPhoneDuplicate,
   updateSignatureMessageStatus,
   updateSignature,
-  deleteSignature
+  deleteSignature,
+  hasKanbanTasks,
+  createKanbanTaskForPetition
 } from '../utils/supabase-storage';
 import { generateBotConversaUrl, isValidWhatsAppNumber } from '../utils/whatsapp-utils';
 import { exportToCSV } from '../utils/export';
@@ -86,6 +88,8 @@ export const PetitionDetail: React.FC = () => {
   const [newResourceType, setNewResourceType] = useState<'youtube' | 'drive' | 'link'>('link');
   const [resourceError, setResourceError] = useState<string>('');
   const [isAddingResource, setIsAddingResource] = useState(false);
+  const [hasTask, setHasTask] = useState<boolean | null>(null);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   // Settings form state
   const [isLoadingCEP, setIsLoadingCEP] = useState(false);
@@ -121,6 +125,10 @@ export const PetitionDetail: React.FC = () => {
         // Carregar links
         const r = await getPetitionResources(currentPetition.id);
         setResources(r);
+
+        // Verificar se há tarefas Kanban
+        const hasKanban = await hasKanbanTasks(currentPetition.id);
+        setHasTask(hasKanban);
       } catch (error) {
         console.error('Error loading petition data:', error);
         navigate('/petitions');
@@ -457,6 +465,22 @@ export const PetitionDetail: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleCreateKanbanTask = async () => {
+    if (!petition) return;
+
+    setIsCreatingTask(true);
+    try {
+      await createKanbanTaskForPetition(petition.id, petition.name, petition.description || '');
+      setHasTask(true);
+      alert('✅ Tarefa Kanban criada com sucesso! Você pode visualizá-la na página de Tarefas Globais.');
+    } catch (error) {
+      console.error('Error creating Kanban task:', error);
+      alert('❌ Erro ao criar tarefa Kanban. Verifique se o board global e a coluna "Coleta de assinaturas" existem.');
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
   const generateBlankSignatureDocument = (petition: Petition): string => {
     const currentDate = new Date().toLocaleDateString('pt-BR');
     
@@ -680,7 +704,29 @@ export const PetitionDetail: React.FC = () => {
         
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{petition.name}</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{petition.name}</h1>
+              {hasTask === false && (
+                <button
+                  onClick={handleCreateKanbanTask}
+                  disabled={isCreatingTask}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Criar tarefa Kanban para este abaixo-assinado"
+                >
+                  {isCreatingTask ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      Criar Tarefa Kanban
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-300">
               <span className="flex items-center gap-1">
                 <Users size={16} />

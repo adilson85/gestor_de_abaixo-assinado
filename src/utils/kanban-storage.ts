@@ -134,13 +134,11 @@ export const deleteKanbanTask = async (taskId: string): Promise<boolean> => {
 // ===== TASK FUNCTIONS =====
 
 export const getKanbanTasks = async (boardId: string, includeArchived: boolean = false): Promise<KanbanTask[]> => {
-  // Buscar tarefas do board específico (agora compatível com local e online)
+  // Buscar tarefas do board específico
   let query = supabase
     .from('kanban_tasks')
-    .select('*');
-
-  // Filtrar por board_id apenas se as tarefas tiverem esse campo
-  // Para compatibilidade, vamos buscar todas e filtrar no código se necessário
+    .select('*')
+    .eq('board_id', boardId);
 
   if (!includeArchived) {
     query = query.eq('is_archived', false);

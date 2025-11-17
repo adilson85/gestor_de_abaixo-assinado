@@ -117,15 +117,15 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   console.log('Petition created successfully:', data);
 
-  // Criar tarefa Kanban automaticamente (opcional) - TEMPORARIAMENTE DESABILITADO
-  // try {
-  //   await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
-  //   console.log('Kanban task created successfully for petition:', data.id);
-  // } catch (kanbanError) {
-  //   console.error('Error creating Kanban task:', kanbanError);
-  //   // Não falhar a criação do petition se o Kanban falhar
-  //   console.log('Continuing without Kanban task...');
-  // }
+  // Criar tarefa Kanban automaticamente
+  try {
+    await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
+    console.log('Kanban task created successfully for petition:', data.id);
+  } catch (kanbanError) {
+    console.error('Error creating Kanban task:', kanbanError);
+    // Não falhar a criação do petition se o Kanban falhar
+    console.log('Continuing without Kanban task...');
+  }
 
   // A tabela signatures já existe, não precisa verificar
   console.log('Petition created successfully with signatures table ready.');
@@ -503,8 +503,24 @@ export const deletePetitionResource = async (id: string): Promise<boolean> => {
   return !error;
 };
 
+// Função para verificar se um abaixo-assinado tem tarefas Kanban (ativas ou arquivadas)
+export const hasKanbanTasks = async (petitionId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('kanban_tasks')
+    .select('id')
+    .eq('petition_id', petitionId)
+    .limit(1);
+
+  if (error) {
+    console.error('Error checking kanban tasks:', error);
+    return false;
+  }
+
+  return data && data.length > 0;
+};
+
 // Função para criar tarefa Kanban automaticamente quando um petition é criado
-const createKanbanTaskForPetition = async (petitionId: string, petitionName: string, petitionDescription: string): Promise<void> => {
+export const createKanbanTaskForPetition = async (petitionId: string, petitionName: string, petitionDescription: string): Promise<void> => {
   try {
     // 1. Buscar board Kanban global
     const { data: boards, error: boardsError } = await supabase
@@ -542,7 +558,18 @@ const createKanbanTaskForPetition = async (petitionId: string, petitionName: str
       return;
     }
 
-    // 4. Criar tarefa Kanban
+    // 4. Calcular posição (última posição + 1)
+    const { data: lastTask } = await supabase
+      .from('kanban_tasks')
+      .select('position')
+      .eq('column_id', columnId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextPosition = (lastTask?.position ?? -1) + 1;
+
+    // 5. Criar tarefa Kanban
     const { error: taskError } = await supabase
       .from('kanban_tasks')
       .insert({
@@ -552,7 +579,7 @@ const createKanbanTaskForPetition = async (petitionId: string, petitionName: str
         title: petitionName,
         description: petitionDescription,
         priority: 'medium',
-        position: 0,
+        position: nextPosition,
         created_by: user.id
       });
 
