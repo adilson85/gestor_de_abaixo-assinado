@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  X, 
-  Calendar, 
-  Users, 
-  Tag, 
-  CheckSquare, 
-  Paperclip, 
-  MessageSquare,
-  AlertCircle,
-  Clock,
-  CheckCircle,
+import {
+  X,
+  Calendar,
+  CheckSquare,
+  Paperclip,
   Plus,
   Edit3,
   Trash2,
   Archive,
   ExternalLink
 } from 'lucide-react';
-import { KanbanTask, KanbanLabel, KanbanChecklistItem } from '../types';
+import { KanbanTask, KanbanLabel, KanbanChecklist, KanbanChecklistItem, KanbanAttachment, KanbanComment } from '../types';
 import { 
   updateKanbanTask, 
   assignUserToTask, 
@@ -46,7 +40,6 @@ interface KanbanTaskModalProps {
   task: KanbanTask;
   onClose: () => void;
   onUpdate: (task: KanbanTask) => void;
-  onDelete: (taskId: string) => void;
   boardId: string;
 }
 
@@ -54,11 +47,9 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   task,
   onClose,
   onUpdate,
-  onDelete,
   boardId
 }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   
@@ -75,11 +66,11 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<KanbanLabel[]>([]);
   const [showLabelSelector, setShowLabelSelector] = useState(false);
-  const [checklists, setChecklists] = useState<any[]>([]);
+  const [checklists, setChecklists] = useState<KanbanChecklist[]>([]);
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
   const [showAddChecklist, setShowAddChecklist] = useState(false);
   const [newChecklistItem, setNewChecklistItem] = useState<{ [checklistId: string]: string }>({});
-  const [attachments, setAttachments] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<KanbanAttachment[]>([]);
   const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
   const [newAttachmentName, setNewAttachmentName] = useState('');
   const [showAddAttachment, setShowAddAttachment] = useState(false);
@@ -91,7 +82,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionPosition, setMentionPosition] = useState(0);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<KanbanComment[]>([]);
 
   useEffect(() => {
     loadLabels();
@@ -99,6 +90,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
     loadAttachments();
     loadAvailableUsers();
     loadComments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, editedTask.id]);
 
   const loadLabels = async () => {
@@ -596,7 +588,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                 {/* Lista de Checklists */}
                 <div className="space-y-4 mb-4">
                   {checklists.map(checklist => {
-                    const completedItems = checklist.items?.filter((item: any) => item.isCompleted).length || 0;
+                    const completedItems = checklist.items?.filter((item: KanbanChecklistItem) => item.isCompleted).length || 0;
                     const totalItems = checklist.items?.length || 0;
                     const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
                     
@@ -638,7 +630,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                         
                         {/* Itens do Checklist */}
                         <div className="space-y-2">
-                          {checklist.items?.map((item: any) => (
+                          {checklist.items?.map((item: KanbanChecklistItem) => (
                             <div key={item.id} className="flex items-center gap-3 group">
                               <input
                                 type="checkbox"

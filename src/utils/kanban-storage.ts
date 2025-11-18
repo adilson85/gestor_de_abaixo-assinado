@@ -10,7 +10,8 @@ import {
   KanbanChecklistItem,
   KanbanAttachment,
   KanbanComment,
-  KanbanActivity
+  KanbanActivity,
+  KanbanColumnDeadline
 } from '../types';
 
 // ===== BOARD FUNCTIONS =====
@@ -321,7 +322,14 @@ export const moveKanbanTask = async (
   columnId: string,
   position: number
 ): Promise<boolean> => {
-  return updateKanbanTask(taskId, { columnId, position });
+  // Calcular nova data de vencimento baseada no prazo da coluna
+  const dueDate = await getDueDateForColumn(columnId);
+  
+  return updateKanbanTask(taskId, { 
+    columnId, 
+    position,
+    dueDate: dueDate || undefined
+  });
 };
 
 export const archiveKanbanTask = async (taskId: string): Promise<boolean> => {
@@ -927,4 +935,178 @@ export const deleteKanbanAttachment = async (attachmentId: string): Promise<bool
     console.error('Error deleting kanban attachment:', error);
     return false;
   }
+};
+
+// ===== COLUMN DEADLINE FUNCTIONS =====
+
+/**
+ * Calcula a data de vencimento baseada no prazo configurado para a coluna
+ */
+const calculateDueDate = (durationValue: number, durationUnit: 'days' | 'months' | 'years'): Date => {
+  const now = new Date();
+  const dueDate = new Date(now);
+
+  switch (durationUnit) {
+    case 'days':
+      dueDate.setDate(now.getDate() + durationValue);
+      break;
+    case 'months':
+      dueDate.setMonth(now.getMonth() + durationValue);
+      break;
+    case 'years':
+      dueDate.setFullYear(now.getFullYear() + durationValue);
+      break;
+  }
+
+  return dueDate;
+};
+
+/**
+ * Busca o prazo configurado para uma coluna
+ */
+export const getColumnDeadline = async (columnId: string): Promise<KanbanColumnDeadline | null> => {
+  const { data, error } = await supabase
+    .from('kanban_column_deadlines')
+    .select('*')
+    .eq('column_id', columnId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Nenhum prazo configurado para esta coluna
+      return null;
+    }
+    console.error('Error getting column deadline:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    columnId: data.column_id,
+    durationValue: data.duration_value,
+    durationUnit: data.duration_unit,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at)
+  };
+};
+
+/**
+ * Busca todos os prazos configurados para as colunas de um board
+ */
+export const getColumnDeadlines = async (boardId: string): Promise<KanbanColumnDeadline[]> => {
+  // Primeiro buscar todas as colunas do board
+  const columns = await getKanbanColumns(boardId);
+  if (columns.length === 0) {
+    return [];
+  }
+
+  const columnIds = columns.map(col => col.id);
+
+  // Buscar deadlines para essas colunas
+  const { data, error } = await supabase
+    .from('kanban_column_deadlines')
+    .select('*')
+    .in('column_id', columnIds);
+
+  if (error) {
+    console.error('Error getting column deadlines:', error);
+    return [];
+  }
+
+  return data.map((deadline: any) => ({
+    id: deadline.id,
+    columnId: deadline.column_id,
+    durationValue: deadline.duration_value,
+    durationUnit: deadline.duration_unit,
+    createdAt: new Date(deadline.created_at),
+    updatedAt: new Date(deadline.updated_at)
+  }));
+};
+
+/**
+ * Salva ou atualiza o prazo de uma coluna
+ */
+export const saveColumnDeadline = async (
+  columnId: string,
+  durationValue: number,
+  durationUnit: 'days' | 'months' | 'years'
+): Promise<KanbanColumnDeadline | null> => {
+  // Verificar se já existe
+  const existing = await getColumnDeadline(columnId);
+
+  let data, error;
+  if (existing) {
+    // Atualizar
+    const { data: updateData, error: updateError } = await supabase
+      .from('kanban_column_deadlines')
+      .update({
+        duration_value: durationValue,
+        duration_unit: durationUnit
+      })
+      .eq('column_id', columnId)
+      .select()
+      .single();
+
+    data = updateData;
+    error = updateError;
+  } else {
+    // Criar
+    const { data: insertData, error: insertError } = await supabase
+      .from('kanban_column_deadlines')
+      .insert({
+        column_id: columnId,
+        duration_value: durationValue,
+        duration_unit: durationUnit
+      })
+      .select()
+      .single();
+
+    data = insertData;
+    error = insertError;
+  }
+
+  if (error) {
+    console.error('Error saving column deadline:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    columnId: data.column_id,
+    durationValue: data.duration_value,
+    durationUnit: data.duration_unit,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at)
+  };
+};
+
+/**
+ * Remove o prazo de uma coluna
+ */
+export const deleteColumnDeadline = async (columnId: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('kanban_column_deadlines')
+    .delete()
+    .eq('column_id', columnId);
+
+  if (error) {
+    console.error('Error deleting column deadline:', error);
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Calcula e retorna a data de vencimento para uma coluna
+ * Se não houver prazo configurado, retorna null
+ */
+export const getDueDateForColumn = async (columnId: string): Promise<Date | null> => {
+  const deadline = await getColumnDeadline(columnId);
+  
+  if (!deadline) {
+    return null;
+  }
+
+  return calculateDueDate(deadline.durationValue, deadline.durationUnit);
 };

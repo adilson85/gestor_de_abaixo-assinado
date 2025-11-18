@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanColumn as KanbanColumnType, KanbanTask, KanbanBoard } from '../types';
 import { KanbanColumn } from './KanbanColumn';
-import { KanbanTaskCard } from './KanbanTaskCard';
 import { KanbanFilters } from './KanbanFilters';
 import { KanbanTaskModal } from './KanbanTaskModal';
 import { ArchivedTasksModal } from './ArchivedTasksModal';
@@ -15,13 +13,13 @@ import {
   searchKanbanTasks,
   updateKanbanTask
 } from '../utils/kanban-storage';
-import { Plus, Settings, Archive, ArchiveRestore } from 'lucide-react';
+import { Settings, Archive, ArchiveRestore } from 'lucide-react';
 
 interface KanbanBoardProps {
   petitionId?: string; // Opcional para filtrar tarefas por abaixo-assinado
 }
 
-export const KanbanBoardComponent: React.FC<KanbanBoardProps> = ({ petitionId }) => {
+export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   const [board, setBoard] = useState<KanbanBoard | null>(null);
   const [columns, setColumns] = useState<KanbanColumnType[]>([]);
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -122,7 +120,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = ({ petitionId })
         labelId: filters.labelId || undefined,
         columnId: filters.columnId || undefined,
         priority: filters.priority || undefined,
-        dueDateFilter: filters.dueDateFilter as any || undefined
+        dueDateFilter: (filters.dueDateFilter as 'overdue' | 'today' | 'week' | 'month') || undefined
       });
       setTasks(filteredTasks);
     } catch (error) {
@@ -143,7 +141,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = ({ petitionId })
     }
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragOver = () => {
     // Handle drag over logic if needed
   };
 

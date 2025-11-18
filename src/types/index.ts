@@ -60,6 +60,16 @@ export interface KanbanColumn {
   updatedAt: Date;
 }
 
+export interface KanbanColumnDeadline {
+  id: string;
+  columnId: string;
+  durationValue: number;
+  durationUnit: 'days' | 'months' | 'years';
+  createdAt: Date;
+  updatedAt: Date;
+  column?: KanbanColumn;
+}
+
 export interface KanbanTask {
   id: string;
   boardId: string;

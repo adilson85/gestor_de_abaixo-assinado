@@ -119,12 +119,14 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 
   // Criar tarefa Kanban automaticamente
   try {
+    console.log('🔄 Iniciando criação automática de tarefa Kanban para petition:', data.id);
     await createKanbanTaskForPetition(data.id, petition.name, petition.description || '');
-    console.log('Kanban task created successfully for petition:', data.id);
-  } catch (kanbanError) {
-    console.error('Error creating Kanban task:', kanbanError);
+    console.log('✅ Kanban task created successfully for petition:', data.id);
+  } catch (kanbanError: any) {
+    console.error('❌ Error creating Kanban task:', kanbanError);
+    console.error('Error details:', JSON.stringify(kanbanError, null, 2));
     // Não falhar a criação do petition se o Kanban falhar
-    console.log('Continuing without Kanban task...');
+    console.log('⚠️ Continuing without Kanban task...');
   }
 
   // A tabela signatures já existe, não precisa verificar
@@ -522,75 +524,151 @@ export const hasKanbanTasks = async (petitionId: string): Promise<boolean> => {
 // Função para criar tarefa Kanban automaticamente quando um petition é criado
 export const createKanbanTaskForPetition = async (petitionId: string, petitionName: string, petitionDescription: string): Promise<void> => {
   try {
+    console.log('📋 Criando tarefa Kanban para petition:', petitionId, petitionName);
+    
     // 1. Buscar board Kanban global
+    console.log('🔍 Buscando board Kanban global...');
     const { data: boards, error: boardsError } = await supabase
       .from('kanban_boards')
       .select('id')
       .eq('is_global', true)
       .limit(1);
 
-    if (boardsError || !boards || boards.length === 0) {
-      console.error('Board Kanban não encontrado:', boardsError);
-      return;
+    if (boardsError) {
+      console.error('❌ Erro ao buscar board:', boardsError);
+      throw new Error(`Erro ao buscar board Kanban: ${boardsError.message}`);
+    }
+
+    if (!boards || boards.length === 0) {
+      console.error('❌ Board Kanban global não encontrado');
+      throw new Error('Board Kanban global não encontrado. Certifique-se de que o board global existe no banco de dados.');
     }
 
     const boardId = boards[0].id;
+    console.log('✅ Board encontrado:', boardId);
 
-    // 2. Buscar coluna "Coleta de assinaturas"
-    const { data: columns, error: columnsError } = await supabase
+    // 2. Buscar coluna "Coleta de assinaturas" (ou primeira coluna se não encontrar)
+    console.log('🔍 Buscando coluna "Coleta de assinaturas"...');
+    let { data: columns, error: columnsError } = await supabase
       .from('kanban_columns')
-      .select('id')
+      .select('id, name')
       .eq('board_id', boardId)
       .eq('name', 'Coleta de assinaturas')
       .limit(1);
 
-    if (columnsError || !columns || columns.length === 0) {
-      console.error('Coluna "Coleta de assinaturas" não encontrada:', columnsError);
-      return;
+    // Se não encontrar, buscar a primeira coluna do board
+    if (!columns || columns.length === 0) {
+      console.log('⚠️ Coluna "Coleta de assinaturas" não encontrada, buscando primeira coluna...');
+      const { data: allColumns, error: allColumnsError } = await supabase
+        .from('kanban_columns')
+        .select('id, name')
+        .eq('board_id', boardId)
+        .order('position', { ascending: true })
+        .limit(1);
+      
+      if (allColumnsError) {
+        columnsError = allColumnsError;
+        columns = null;
+      } else {
+        columns = allColumns;
+        if (columns && columns.length > 0) {
+          console.log(`⚠️ Usando primeira coluna encontrada: "${columns[0].name}"`);
+        }
+      }
+    }
+
+    if (columnsError) {
+      console.error('❌ Erro ao buscar coluna:', columnsError);
+      throw new Error(`Erro ao buscar coluna: ${columnsError.message}`);
+    }
+
+    if (!columns || columns.length === 0) {
+      console.error('❌ Coluna "Coleta de assinaturas" não encontrada');
+      throw new Error('Coluna "Coleta de assinaturas" não encontrada. Certifique-se de que a coluna existe no board global.');
     }
 
     const columnId = columns[0].id;
+    console.log('✅ Coluna encontrada:', columnId);
 
     // 3. Buscar usuário atual
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Usuário não autenticado');
-      return;
+    console.log('🔍 Verificando autenticação do usuário...');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('❌ Erro ao buscar usuário:', userError);
+      throw new Error(`Erro ao buscar usuário: ${userError.message}`);
     }
 
+    if (!user) {
+      console.error('❌ Usuário não autenticado');
+      throw new Error('Usuário não autenticado. É necessário estar logado para criar tarefas Kanban.');
+    }
+
+    console.log('✅ Usuário autenticado:', user.id);
+
     // 4. Calcular posição (última posição + 1)
-    const { data: lastTask } = await supabase
+    console.log('🔍 Calculando posição da tarefa...');
+    const { data: lastTask, error: positionError } = await supabase
       .from('kanban_tasks')
       .select('position')
       .eq('column_id', columnId)
       .order('position', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    const nextPosition = (lastTask?.position ?? -1) + 1;
-
-    // 5. Criar tarefa Kanban
-    const { error: taskError } = await supabase
-      .from('kanban_tasks')
-      .insert({
-        board_id: boardId,
-        column_id: columnId,
-        petition_id: petitionId,
-        title: petitionName,
-        description: petitionDescription,
-        priority: 'medium',
-        position: nextPosition,
-        created_by: user.id
-      });
-
-    if (taskError) {
-      console.error('Erro ao criar tarefa Kanban:', taskError);
-      throw taskError;
+    if (positionError && positionError.code !== 'PGRST116') {
+      console.warn('⚠️ Erro ao buscar última posição (pode ser primeira tarefa):', positionError);
     }
 
-    console.log('Tarefa Kanban criada com sucesso para petition:', petitionId);
-  } catch (error) {
-    console.error('Erro na criação da tarefa Kanban:', error);
+    const nextPosition = (lastTask?.position ?? -1) + 1;
+    console.log('✅ Posição calculada:', nextPosition);
+
+    // 5. Calcular data de vencimento baseada no prazo da coluna
+    console.log('🔍 Calculando data de vencimento...');
+    const { getDueDateForColumn } = await import('./kanban-storage');
+    const dueDate = await getDueDateForColumn(columnId);
+    
+    if (dueDate) {
+      console.log('✅ Data de vencimento calculada:', dueDate);
+    } else {
+      console.log('⚠️ Nenhum prazo configurado para esta coluna');
+    }
+
+    // 6. Criar tarefa Kanban
+    console.log('🔍 Criando tarefa Kanban...');
+    const taskData: any = {
+      board_id: boardId,
+      column_id: columnId,
+      petition_id: petitionId,
+      title: petitionName,
+      description: petitionDescription,
+      priority: 'medium',
+      position: nextPosition,
+      created_by: user.id
+    };
+    
+    if (dueDate) {
+      taskData.due_date = dueDate.toISOString();
+    }
+    
+    console.log('📝 Dados da tarefa:', taskData);
+    
+    const { data: createdTask, error: taskError } = await supabase
+      .from('kanban_tasks')
+      .insert(taskData)
+      .select()
+      .single();
+
+    if (taskError) {
+      console.error('❌ Erro ao criar tarefa Kanban:', taskError);
+      console.error('Detalhes do erro:', JSON.stringify(taskError, null, 2));
+      throw new Error(`Erro ao criar tarefa Kanban: ${taskError.message} (Código: ${taskError.code})`);
+    }
+
+    console.log('✅ Tarefa Kanban criada com sucesso! ID:', createdTask?.id);
+  } catch (error: any) {
+    console.error('❌ Erro na criação da tarefa Kanban:', error);
+    // Re-throw para que o erro seja capturado no savePetition
     throw error;
   }
 };

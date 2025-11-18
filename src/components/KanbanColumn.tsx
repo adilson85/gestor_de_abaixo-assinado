@@ -1,26 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanColumn as KanbanColumnType, KanbanTask } from '../types';
 import { KanbanTaskCard } from './KanbanTaskCard';
-import { KanbanTaskModal } from './KanbanTaskModal';
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import clsx from 'clsx';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
   tasks: KanbanTask[];
   onTaskClick: (task: KanbanTask) => void;
-  onTaskCreate: (task: KanbanTask) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   column,
   tasks,
-  onTaskClick,
-  onTaskCreate
+  onTaskClick
 }) => {
-  const [showAddTask, setShowAddTask] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: column.id,

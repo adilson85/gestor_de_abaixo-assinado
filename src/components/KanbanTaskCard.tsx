@@ -106,7 +106,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
       )}
       role="button"
       tabIndex={0}
-      onClick={(event) => {
+      onClick={() => {
         if (isDragging) {
           return;
         }

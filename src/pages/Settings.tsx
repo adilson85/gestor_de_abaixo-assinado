@@ -1,9 +1,94 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Database, Download, Upload, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Database, Download, Upload, AlertTriangle, Clock, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getGlobalKanbanBoard, getKanbanColumns, getColumnDeadlines, saveColumnDeadline } from '../utils/kanban-storage';
+import { KanbanColumn, KanbanColumnDeadline } from '../types';
 
 export const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [columns, setColumns] = useState<KanbanColumn[]>([]);
+  const [deadlines, setDeadlines] = useState<Map<string, KanbanColumnDeadline>>(new Map());
+  const [editingDeadlines, setEditingDeadlines] = useState<Map<string, { value: number; unit: 'days' | 'months' | 'years' }>>(new Map());
+  const [savingDeadline, setSavingDeadline] = useState<string | null>(null);
+  const [loadingDeadlines, setLoadingDeadlines] = useState(true);
+
+  // Carregar colunas e prazos
+  useEffect(() => {
+    loadDeadlinesConfig();
+  }, []);
+
+  const loadDeadlinesConfig = async () => {
+    try {
+      setLoadingDeadlines(true);
+      const board = await getGlobalKanbanBoard();
+      if (!board) {
+        console.error('Board global não encontrado');
+        return;
+      }
+
+      const [columnsData, deadlinesData] = await Promise.all([
+        getKanbanColumns(board.id),
+        getColumnDeadlines(board.id)
+      ]);
+
+      setColumns(columnsData);
+
+      // Criar mapa de deadlines por columnId
+      const deadlinesMap = new Map<string, KanbanColumnDeadline>();
+      deadlinesData.forEach(deadline => {
+        deadlinesMap.set(deadline.columnId, deadline);
+      });
+      setDeadlines(deadlinesMap);
+
+      // Inicializar valores de edição
+      const editingMap = new Map<string, { value: number; unit: 'days' | 'months' | 'years' }>();
+      columnsData.forEach(column => {
+        const deadline = deadlinesMap.get(column.id);
+        editingMap.set(column.id, {
+          value: deadline?.durationValue || 30,
+          unit: deadline?.durationUnit || 'days'
+        });
+      });
+      setEditingDeadlines(editingMap);
+    } catch (error) {
+      console.error('Erro ao carregar configurações de prazos:', error);
+    } finally {
+      setLoadingDeadlines(false);
+    }
+  };
+
+  const handleDeadlineChange = (columnId: string, field: 'value' | 'unit', newValue: number | 'days' | 'months' | 'years') => {
+    const editing = new Map(editingDeadlines);
+    const current = editing.get(columnId) || { value: 30, unit: 'days' as const };
+    editing.set(columnId, {
+      ...current,
+      [field]: newValue
+    });
+    setEditingDeadlines(editing);
+  };
+
+  const handleSaveDeadline = async (columnId: string) => {
+    const editing = editingDeadlines.get(columnId);
+    if (!editing) return;
+
+    setSavingDeadline(columnId);
+    try {
+      const saved = await saveColumnDeadline(columnId, editing.value, editing.unit);
+      if (saved) {
+        const newDeadlines = new Map(deadlines);
+        newDeadlines.set(columnId, saved);
+        setDeadlines(newDeadlines);
+        alert('Prazo salvo com sucesso!');
+      } else {
+        alert('Erro ao salvar prazo. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar prazo:', error);
+      alert('Erro ao salvar prazo. Tente novamente.');
+    } finally {
+      setSavingDeadline(null);
+    }
+  };
 
   const handleExportData = async () => {
     setIsLoading(true);
@@ -171,6 +256,108 @@ export const Settings: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <Clock size={24} className="text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Prazos das Tarefas Kanban</h2>
+          </div>
+          
+          <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
+            Configure o prazo de vencimento automático para cada etapa do Kanban. Quando uma tarefa é movida para uma coluna, o prazo será calculado automaticamente com base na configuração abaixo.
+          </p>
+
+          {loadingDeadlines ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {columns.map((column) => {
+                const deadline = deadlines.get(column.id);
+                const editing = editingDeadlines.get(column.id) || { value: 30, unit: 'days' as const };
+                const isSaving = savingDeadline === column.id;
+                const hasChanged = !deadline || 
+                  deadline.durationValue !== editing.value || 
+                  deadline.durationUnit !== editing.unit;
+
+                return (
+                  <div
+                    key={column.id}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-gray-900 dark:text-white">
+                        {column.name}
+                      </h3>
+                      {deadline && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Prazo atual: {deadline.durationValue} {deadline.durationUnit === 'days' ? 'dias' : deadline.durationUnit === 'months' ? 'meses' : 'anos'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Duração
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editing.value}
+                          onChange={(e) => handleDeadlineChange(column.id, 'value', parseInt(e.target.value) || 1)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Unidade
+                        </label>
+                        <select
+                          value={editing.unit}
+                          onChange={(e) => handleDeadlineChange(column.id, 'unit', e.target.value as 'days' | 'months' | 'years')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="days">Dias</option>
+                          <option value="months">Meses</option>
+                          <option value="years">Anos</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          onClick={() => handleSaveDeadline(column.id)}
+                          disabled={isSaving || !hasChanged}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSaving ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <Save size={16} />
+                              Salvar
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {columns.length === 0 && (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  Nenhuma coluna encontrada. Crie colunas no Kanban primeiro.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
