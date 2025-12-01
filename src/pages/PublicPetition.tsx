@@ -1,9 +1,205 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, MapPin, CheckCircle, AlertCircle, Check, X } from 'lucide-react';
+import { Users, MapPin, CheckCircle, AlertCircle, Check, X, Share2, Copy, MessageCircle } from 'lucide-react';
 import { Petition, Signature } from '../types';
 import { getPetitionBySlug, saveSignature, getSignaturesByPetition, checkPhoneDuplicate } from '../utils/supabase-storage';
 import { validatePhone, normalizePhone } from '../utils/validation';
+
+// Componente para atualizar meta tags dinamicamente
+const updateMetaTags = (petition: Petition, signatureCount: number) => {
+  const title = `${petition.name} - Abaixo-Assinado`;
+  const description = petition.description || `Assine este abaixo-assinado e ajude a fazer a diferença. Já são ${signatureCount} assinaturas!`;
+  const url = window.location.href;
+  const image = petition.imageUrl || `${window.location.origin}/icon-512x512.png`;
+
+  // Atualizar título da página
+  document.title = title;
+
+  // Função auxiliar para criar ou atualizar meta tag
+  const setMetaTag = (property: string, content: string, isProperty = true) => {
+    const attr = isProperty ? 'property' : 'name';
+    let meta = document.querySelector(`meta[${attr}="${property}"]`) as HTMLMetaElement;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute(attr, property);
+      document.head.appendChild(meta);
+    }
+    meta.content = content;
+  };
+
+  // Meta tags básicas
+  setMetaTag('description', description, false);
+  setMetaTag('keywords', `abaixo-assinado, petição, ${petition.name}, cidadania, participação`, false);
+
+  // Open Graph (Facebook, LinkedIn, etc.)
+  setMetaTag('og:title', title);
+  setMetaTag('og:description', description);
+  setMetaTag('og:url', url);
+  setMetaTag('og:image', image);
+  setMetaTag('og:type', 'website');
+  setMetaTag('og:site_name', 'Sistema de Abaixo-Assinados');
+
+  // Twitter Card
+  setMetaTag('twitter:card', 'summary_large_image', false);
+  setMetaTag('twitter:title', title, false);
+  setMetaTag('twitter:description', description, false);
+  setMetaTag('twitter:image', image, false);
+};
+
+// Componente de botões de compartilhamento
+const ShareButtons: React.FC<{ petition: Petition; signatureCount: number }> = ({ petition, signatureCount }) => {
+  const [copied, setCopied] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  
+  const shareUrl = window.location.href;
+  const shareText = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatureCount} assinaturas! Sua participação faz a diferença.`;
+  
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar:', err);
+    }
+  };
+
+  const shareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+    window.open(url, '_blank');
+  };
+
+  const shareFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const shareTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const shareTelegram = () => {
+    const url = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: petition.name,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          setShowShare(true);
+        }
+      }
+    } else {
+      setShowShare(true);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleNativeShare}
+        className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full transition-colors text-sm font-medium"
+      >
+        <Share2 size={18} />
+        <span className="hidden sm:inline">Compartilhar</span>
+      </button>
+
+      {showShare && (
+        <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-2xl p-4 z-50 min-w-[280px]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-semibold text-gray-800">Compartilhar</span>
+            <button 
+              onClick={() => setShowShare(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <button
+              onClick={shareWhatsApp}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-green-50 transition-colors group"
+              title="WhatsApp"
+            >
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <MessageCircle size={24} className="text-white" />
+              </div>
+              <span className="text-xs text-gray-600">WhatsApp</span>
+            </button>
+            
+            <button
+              onClick={shareFacebook}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-blue-50 transition-colors group"
+              title="Facebook"
+            >
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </div>
+              <span className="text-xs text-gray-600">Facebook</span>
+            </button>
+            
+            <button
+              onClick={shareTwitter}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-gray-100 transition-colors group"
+              title="X (Twitter)"
+            >
+              <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </div>
+              <span className="text-xs text-gray-600">X</span>
+            </button>
+            
+            <button
+              onClick={shareTelegram}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-blue-50 transition-colors group"
+              title="Telegram"
+            >
+              <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+              </div>
+              <span className="text-xs text-gray-600">Telegram</span>
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="flex-1 bg-transparent text-sm text-gray-600 outline-none truncate"
+            />
+            <button
+              onClick={handleCopyLink}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                copied 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const PublicPetition: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -60,6 +256,9 @@ export const PublicPetition: React.FC = () => {
       // Carregar assinaturas para mostrar contador
       const signaturesData = await getSignaturesByPetition(petitionData.id);
       setSignatures(signaturesData);
+      
+      // Atualizar meta tags para SEO e compartilhamento
+      updateMetaTags(petitionData, signaturesData.length);
     } catch (err) {
       console.error('Error loading petition:', err);
       setError('Erro ao carregar abaixo-assinado');
@@ -383,62 +582,90 @@ export const PublicPetition: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white relative overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
+        </div>
+        
+        <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12 md:py-16 relative z-10">
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">ABAIXO-ASSINADO</h1>
+            {/* Header com título */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4 sm:mb-6">ABAIXO-ASSINADO</h1>
             
             {/* Imagem do abaixo-assinado */}
             {petition?.imageUrl && (
-              <div className="mb-8 px-4">
+              <div className="mb-6 sm:mb-8 px-2 sm:px-4">
                 <img
                   src={petition.imageUrl}
                   alt={petition.name}
                   className="mx-auto w-full max-w-2xl rounded-xl shadow-2xl object-cover border-4 border-white/20"
-                  style={{ maxHeight: '450px' }}
+                  style={{ maxHeight: '400px' }}
                 />
               </div>
             )}
             
-            <h2 className="text-3xl font-bold mb-6">{petition?.name}</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 px-2 leading-tight">{petition?.name}</h2>
             
             {petition?.description && (
-              <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-4 sm:mb-6 max-w-3xl mx-auto px-2 leading-relaxed">
                 {petition.description}
               </p>
             )}
 
-            <div className="flex flex-wrap justify-center gap-6 text-blue-100">
+            {/* Botão de compartilhar abaixo da descrição */}
+            {petition && (
+              <div className="flex justify-center mb-6 sm:mb-8">
+                <ShareButtons petition={petition} signatureCount={signatures.length} />
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-blue-100 mb-6">
               {petition?.location && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={20} />
-                  <span>{petition.location}</span>
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+                  <MapPin size={18} className="flex-shrink-0" />
+                  <span className="text-sm sm:text-base">{petition.location}</span>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 text-center">
-              <div className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg">
-                <Users size={24} className="mr-3" />
-                <div className="text-left">
-                  <div className="text-2xl font-bold">{signatures.length}</div>
-                  <div className="text-sm font-medium">Total de assinaturas</div>
+            {/* Contador de assinaturas - destaque */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4 sm:mt-6">
+              <div className="bg-white/15 backdrop-blur-sm border border-white/20 px-6 sm:px-8 py-4 rounded-2xl shadow-xl">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="bg-white/20 p-3 rounded-full">
+                    <Users size={28} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-3xl sm:text-4xl font-bold">{signatures.length}</div>
+                    <div className="text-sm sm:text-base font-medium text-blue-100">assinaturas</div>
+                  </div>
                 </div>
               </div>
+              
+              {/* CTA mobile */}
+              <a 
+                href="#assinar" 
+                className="sm:hidden bg-white text-blue-700 font-bold px-6 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
+              >
+                Assinar agora
+              </a>
             </div>
           </div>
         </div>
       </div>
 
       {/* Form Section */}
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+      <div id="assinar" className="max-w-2xl mx-auto px-4 py-8 sm:py-12 scroll-mt-4">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
             Adicione sua assinatura
           </h3>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="md:col-span-2">
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Nome Completo *
@@ -669,11 +896,65 @@ export const PublicPetition: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-800 text-white py-8">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-gray-300">
-            {petition?.responsible && `Responsável: ${petition.responsible}`}
-          </p>
+      <div className="bg-gray-900 text-white py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center space-y-4">
+            {petition?.responsible && (
+              <p className="text-gray-400 text-sm sm:text-base">
+                <span className="text-gray-500">Responsável:</span> {petition.responsible}
+              </p>
+            )}
+            
+            {/* Botões de compartilhamento no footer */}
+            {petition && (
+              <div className="pt-4 border-t border-gray-700">
+                <p className="text-gray-400 text-sm mb-4">Ajude a divulgar esta causa:</p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      const text = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatures.length} assinaturas!`;
+                      const url = `https://wa.me/?text=${encodeURIComponent(`${text}\n\n${window.location.href}`)}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full transition-colors"
+                    title="Compartilhar no WhatsApp"
+                  >
+                    <MessageCircle size={20} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
+                      window.open(url, '_blank', 'width=600,height=400');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full transition-colors"
+                    title="Compartilhar no Facebook"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        alert('Link copiado!');
+                      } catch (err) {
+                        console.error('Erro ao copiar:', err);
+                      }
+                    }}
+                    className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full transition-colors"
+                    title="Copiar link"
+                  >
+                    <Copy size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <p className="text-gray-500 text-xs pt-4">
+              Sistema de Abaixo-Assinados © {new Date().getFullYear()}
+            </p>
+          </div>
         </div>
       </div>
     </div>
