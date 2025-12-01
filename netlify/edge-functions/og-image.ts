@@ -1,8 +1,9 @@
 import { Context } from "https://edge.netlify.com";
 
 // Configuração do Supabase (pegar das variáveis de ambiente do Netlify)
-const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL") || "";
-const SUPABASE_ANON_KEY = Deno.env.get("VITE_SUPABASE_ANON_KEY") || "";
+// Tenta com e sem prefixo VITE_ para compatibilidade
+const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL") || Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("VITE_SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 interface Petition {
   id: string;
@@ -16,28 +17,35 @@ interface Petition {
 
 async function getPetitionBySlug(slug: string): Promise<Petition | null> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error("Supabase credentials not configured");
+    console.error("Supabase credentials not configured. URL:", SUPABASE_URL ? "set" : "missing", "Key:", SUPABASE_ANON_KEY ? "set" : "missing");
     return null;
   }
 
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/petitions?slug=eq.${encodeURIComponent(slug)}&select=id,slug,name,description,location,image_url,responsible&limit=1`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
+    const url = `${SUPABASE_URL}/rest/v1/petitions?slug=eq.${encodeURIComponent(slug)}&select=id,slug,name,description,location,image_url,responsible&limit=1`;
+    
+    const response = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
-      console.error("Error fetching petition:", response.statusText);
+      const errorText = await response.text();
+      console.error(`Error fetching petition (${response.status}):`, errorText);
       return null;
     }
 
     const data = await response.json();
-    return data.length > 0 ? data[0] : null;
+    
+    if (!data || data.length === 0) {
+      console.error("Petition not found for slug:", slug);
+      return null;
+    }
+    
+    return data[0];
   } catch (error) {
     console.error("Error fetching petition:", error);
     return null;
@@ -94,7 +102,17 @@ export default async function handler(request: Request, context: Context) {
   
   // Verificar se é um crawler/bot de rede social
   const userAgent = request.headers.get("user-agent") || "";
-  const isCrawler = /facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Googlebot/i.test(userAgent);
+  const isCrawler = /facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Googlebot|bingbot/i.test(userAgent);
+
+  // Log para debug
+  console.log("Request:", {
+    path: url.pathname,
+    slug,
+    userAgent,
+    isCrawler,
+    hasSupabaseUrl: !!SUPABASE_URL,
+    hasSupabaseKey: !!SUPABASE_ANON_KEY,
+  });
 
   // Se não for um crawler, deixar o React SPA lidar com a página
   if (!isCrawler) {
@@ -105,8 +123,11 @@ export default async function handler(request: Request, context: Context) {
   const petition = await getPetitionBySlug(slug);
 
   if (!petition) {
+    console.error("Petition not found, falling back to SPA");
     return context.next();
   }
+  
+  console.log("Petition found:", petition.name);
 
   // Buscar contagem de assinaturas
   const signatureCount = await getSignatureCount(petition.id);
