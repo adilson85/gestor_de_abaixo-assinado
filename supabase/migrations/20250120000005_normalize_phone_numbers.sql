@@ -10,3 +10,4 @@ WHERE phone ~ '[^0-9]';
 -- Comentário: Esta migration normaliza telefones que foram salvos com formatação
 -- Ex: "(47) 99999-9999" -> "47999999999"
 
+

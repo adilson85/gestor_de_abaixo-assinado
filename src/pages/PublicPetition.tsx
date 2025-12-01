@@ -228,6 +228,10 @@ export const PublicPetition: React.FC = () => {
     message: string;
     isChecking: boolean;
   }>({ isValid: null, message: '', isChecking: false });
+  const [nameValidation, setNameValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+  }>({ isValid: null, message: '' });
 
   useEffect(() => {
     if (slug) {
@@ -277,6 +281,55 @@ export const PublicPetition: React.FC = () => {
     }
   };
 
+  // Validação em tempo real do nome completo
+  const validateNameRealTime = useCallback((name: string) => {
+    const trimmedName = name.trim();
+    
+    // Se estiver vazio, resetar validação
+    if (!trimmedName) {
+      setNameValidation({ isValid: null, message: '' });
+      return;
+    }
+
+    // Dividir o nome em partes (ignorando espaços extras)
+    const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
+    
+    // Verificar quantidade de palavras
+    if (nameParts.length < 2) {
+      setNameValidation({ 
+        isValid: false, 
+        message: '⚠️ Digite seu nome completo (nome e sobrenome)' 
+      });
+      return;
+    }
+
+    // Verificar se cada parte tem pelo menos 2 caracteres
+    const hasShortParts = nameParts.some(part => part.length < 2);
+    if (hasShortParts) {
+      setNameValidation({ 
+        isValid: false, 
+        message: '⚠️ O nome e sobrenome devem ter pelo menos 2 caracteres cada' 
+      });
+      return;
+    }
+
+    // Verificar se não são apenas letras repetidas (ex: "aaa bbb")
+    const hasInvalidParts = nameParts.some(part => /^(.)\1+$/.test(part));
+    if (hasInvalidParts) {
+      setNameValidation({ 
+        isValid: false, 
+        message: '⚠️ Por favor, digite um nome válido' 
+      });
+      return;
+    }
+
+    // Nome válido
+    setNameValidation({ 
+      isValid: true, 
+      message: '✅ Nome completo válido' 
+    });
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -284,6 +337,11 @@ export const PublicPetition: React.FC = () => {
     // Limpar erro do campo
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Validar nome em tempo real
+    if (name === 'name') {
+      validateNameRealTime(value);
     }
   };
 
@@ -422,10 +480,19 @@ export const PublicPetition: React.FC = () => {
     // Validar nome completo (pelo menos 2 nomes)
     if (!formData.name.trim()) {
       errors.name = 'Nome completo é obrigatório';
+      setNameValidation({ isValid: false, message: '⚠️ Nome é obrigatório' });
     } else {
-      const nameParts = formData.name.trim().split(' ').filter(part => part.length > 0);
+      const nameParts = formData.name.trim().split(/\s+/).filter(part => part.length > 0);
       if (nameParts.length < 2) {
         errors.name = 'Digite seu nome completo (nome e sobrenome)';
+        setNameValidation({ isValid: false, message: '⚠️ Digite seu nome completo (nome e sobrenome)' });
+      } else {
+        // Verificar se cada parte tem pelo menos 2 caracteres
+        const hasShortParts = nameParts.some(part => part.length < 2);
+        if (hasShortParts) {
+          errors.name = 'O nome e sobrenome devem ter pelo menos 2 caracteres cada';
+          setNameValidation({ isValid: false, message: '⚠️ O nome e sobrenome devem ter pelo menos 2 caracteres cada' });
+        }
       }
     }
 
@@ -634,6 +701,7 @@ export const PublicPetition: React.FC = () => {
               });
               setConsentAccepted(false);
               setPhoneValidation({ isValid: null, message: '', isChecking: false });
+              setNameValidation({ isValid: null, message: '' });
             }}
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
@@ -756,20 +824,50 @@ export const PublicPetition: React.FC = () => {
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Nome Completo *
                 </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.name ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Digite seu nome e sobrenome"
-                />
-                {formErrors.name && (
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      formErrors.name 
+                        ? 'border-red-500 bg-red-50' 
+                        : nameValidation.isValid === true 
+                          ? 'border-green-500 bg-green-50' 
+                          : nameValidation.isValid === false 
+                            ? 'border-yellow-500 bg-yellow-50'
+                            : 'border-gray-300'
+                    }`}
+                    placeholder="Digite seu nome e sobrenome"
+                    autoComplete="name"
+                  />
+                  {/* Ícone de validação */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    {nameValidation.isValid === true ? (
+                      <Check className="h-5 w-5 text-green-500" />
+                    ) : nameValidation.isValid === false ? (
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                    ) : null}
+                  </div>
+                </div>
+                {/* Mensagem de validação em tempo real */}
+                {nameValidation.message && (
+                  <p className={`text-sm mt-1 transition-colors ${
+                    nameValidation.isValid === true 
+                      ? 'text-green-600' 
+                      : 'text-yellow-600'
+                  }`}>
+                    {nameValidation.message}
+                  </p>
+                )}
+                {formErrors.name && !nameValidation.message && (
                   <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>
                 )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Por favor, digite seu nome e sobrenome completos
+                </p>
               </div>
 
               <div className="md:col-span-2">
