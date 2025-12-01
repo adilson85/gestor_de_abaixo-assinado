@@ -14,6 +14,7 @@ USING (available_online = true);
 
 -- Também garantir leitura pública de assinaturas para contagem
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.signatures;
+DROP POLICY IF EXISTS "Enable public read for signature count" ON public.signatures;
 
 -- Política que permite leitura pública de assinaturas (apenas para contagem)
 CREATE POLICY "Enable public read for signature count" 
