@@ -30,3 +30,7 @@ CONFIGURACOES_SUPABASE_PRIVADO.md
 *.backup
 *_PRIVADO.*
 .env.local.online
+
+# Test coverage
+coverage/
+*.lcov

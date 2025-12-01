@@ -1,5 +1,3 @@
-import React from 'react';
-import { StatsCard } from '../StatsCard';
 import { FileText } from 'lucide-react';
 
 describe('StatsCard', () => {

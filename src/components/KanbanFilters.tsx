@@ -2,16 +2,18 @@ import React from 'react';
 import { KanbanColumn } from '../types';
 import { X, Search, Filter } from 'lucide-react';
 
+export interface KanbanFiltersType {
+  searchTerm: string;
+  assigneeId: string;
+  labelId: string;
+  columnId: string;
+  priority: string;
+  dueDateFilter: string;
+}
+
 interface KanbanFiltersProps {
-  filters: {
-    searchTerm: string;
-    assigneeId: string;
-    labelId: string;
-    columnId: string;
-    priority: string;
-    dueDateFilter: string;
-  };
-  onFiltersChange: (filters: any) => void;
+  filters: KanbanFiltersType;
+  onFiltersChange: (filters: KanbanFiltersType) => void;
   columns: KanbanColumn[];
   onClose: () => void;
 }

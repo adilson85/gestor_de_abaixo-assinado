@@ -156,7 +156,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = React.mem
         autocompleteRef.current = null;
       }
     };
-  }, []); // Remover dependências para evitar re-renderizações
+  }, [handleAddressSelect]);
 
   // Se a API key não estiver disponível, renderizar um input simples
   if (apiKeyAvailable === false) {

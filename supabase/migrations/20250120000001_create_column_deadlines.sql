@@ -33,3 +33,5 @@ CREATE TRIGGER update_kanban_column_deadlines_updated_at
 -- Insert default deadlines for existing columns (if any)
 -- Isso será feito via aplicação, mas podemos ter valores padrão aqui se necessário
 
+
+

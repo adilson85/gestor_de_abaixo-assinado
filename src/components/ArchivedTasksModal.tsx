@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Search, ArchiveRestore, Trash2, Calendar } from 'lucide-react';
 import { KanbanTask } from '../types';
 import { updateKanbanTask, deleteKanbanTask } from '../utils/kanban-storage';
