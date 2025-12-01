@@ -23,7 +23,7 @@ export const getPetitions = async (): Promise<Petition[]> => {
     collectionDate: petition.collection_date ? new Date(petition.collection_date) : undefined,
     responsible: petition.responsible || undefined,
     imageUrl: petition.image_url || undefined,
-    availableOnline: data.available_online || false,
+    availableOnline: petition.available_online || false,
     tableName: petition.table_name,
     createdAt: new Date(petition.created_at),
     updatedAt: new Date(petition.updated_at),
@@ -453,14 +453,7 @@ export const deleteSignature = async (signatureId: string): Promise<boolean> => 
 };
 
 // Resources (YouTube / Drive / Link)
-export interface PetitionResource {
-  id: string;
-  petitionId: string;
-  type: 'youtube' | 'drive' | 'link';
-  title?: string;
-  url: string;
-  createdAt: Date;
-}
+// PetitionResource interface is imported from ../types
 
 export const getPetitionResources = async (petitionId: string): Promise<PetitionResource[]> => {
   const { data, error } = await supabase
