@@ -519,7 +519,19 @@ export const PublicPetition: React.FC = () => {
     } catch (err: any) {
       console.error('Error saving signature:', err);
       const errorMessage = err?.message || err?.error?.message || 'Erro desconhecido';
-      setError(`Erro ao salvar assinatura: ${errorMessage}. Verifique sua conexão e tente novamente.`);
+      
+      // Verificar se é erro de duplicata (do constraint UNIQUE no banco)
+      if (errorMessage.includes('já assinou') || errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorMessage.includes('apenas uma vez')) {
+        setError('Este número de telefone já foi utilizado para assinar este abaixo-assinado. Cada pessoa pode assinar apenas uma vez.');
+        // Atualizar validação do telefone para mostrar o erro
+        setPhoneValidation({ 
+          isValid: false, 
+          message: '❌ Este número já assinou este abaixo-assinado', 
+          isChecking: false 
+        });
+      } else {
+        setError(`Erro ao salvar assinatura: ${errorMessage}. Verifique sua conexão e tente novamente.`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -800,15 +812,33 @@ export const PublicPetition: React.FC = () => {
                 </div>
                 {/* Mensagem de validação em tempo real */}
                 {phoneValidation.message && (
-                  <p className={`text-sm mt-1 transition-colors ${
-                    phoneValidation.isValid === true 
-                      ? 'text-green-600' 
-                      : phoneValidation.isValid === false 
-                        ? 'text-red-600 font-medium'
-                        : 'text-gray-500'
-                  }`}>
-                    {phoneValidation.message}
-                  </p>
+                  phoneValidation.isValid === false && phoneValidation.message.includes('já assinou') ? (
+                    // Alerta destacado para número duplicado
+                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-red-800 font-semibold text-sm">
+                            Número já cadastrado!
+                          </p>
+                          <p className="text-red-600 text-sm mt-1">
+                            Este telefone já foi utilizado para assinar este abaixo-assinado. 
+                            Cada pessoa pode assinar apenas uma vez.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={`text-sm mt-1 transition-colors ${
+                      phoneValidation.isValid === true 
+                        ? 'text-green-600' 
+                        : phoneValidation.isValid === false 
+                          ? 'text-red-600 font-medium'
+                          : 'text-gray-500'
+                    }`}>
+                      {phoneValidation.message}
+                    </p>
+                  )
                 )}
                 {formErrors.phone && !phoneValidation.message && (
                   <p className="text-red-600 text-sm mt-1">{formErrors.phone}</p>
