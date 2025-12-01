@@ -208,7 +208,6 @@ export const PublicPetition: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [error, setError] = useState('');
 
   // Form data
@@ -514,26 +513,13 @@ export const PublicPetition: React.FC = () => {
         setSubmitted(true);
         // Atualizar contador
         setSignatures(prev => [...prev, saved]);
-        
-        // Iniciar contagem regressiva
-        let timeLeft = 3;
-        setCountdown(timeLeft);
-        
-        const countdownInterval = setInterval(() => {
-          timeLeft -= 1;
-          setCountdown(timeLeft);
-          
-          if (timeLeft <= 0) {
-            clearInterval(countdownInterval);
-            window.location.href = 'https://tonezi.com.br/';
-          }
-        }, 1000);
       } else {
-        setError('Erro ao salvar assinatura. Tente novamente.');
+        setError('Erro ao salvar assinatura. Verifique se todos os campos estão preenchidos corretamente e tente novamente.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving signature:', err);
-      setError('Erro ao salvar assinatura. Tente novamente.');
+      const errorMessage = err?.message || err?.error?.message || 'Erro desconhecido';
+      setError(`Erro ao salvar assinatura: ${errorMessage}. Verifique sua conexão e tente novamente.`);
     } finally {
       setSubmitting(false);
     }
@@ -559,8 +545,11 @@ export const PublicPetition: React.FC = () => {
   }
 
   if (submitted) {
+    const shareUrl = window.location.href;
+    const shareText = `Assine o abaixo-assinado: ${petition?.name}. Já são ${signatures.length} assinaturas! Sua participação faz a diferença.`;
+    
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center bg-white p-8 rounded-lg shadow-lg">
           <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Assinatura Registrada!</h1>
@@ -572,19 +561,72 @@ export const PublicPetition: React.FC = () => {
               <strong>{signatures.length}</strong> pessoas já assinaram este abaixo-assinado
             </p>
           </div>
-          <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-            <p className="text-sm text-green-800 mb-2">
-              Redirecionando para o site oficial...
+          
+          {/* Botões de compartilhamento */}
+          <div className="bg-green-50 border border-green-200 p-6 rounded-lg mb-4">
+            <p className="text-sm font-semibold text-green-800 mb-4">
+              Ajude a divulgar esta causa:
             </p>
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-              <span className="text-lg font-bold text-green-700">{countdown}</span>
-              <span className="text-sm text-green-600">segundos</span>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => {
+                  const url = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
+                  window.open(url, '_blank');
+                }}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <MessageCircle size={18} />
+                WhatsApp
+              </button>
+              <button
+                onClick={() => {
+                  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+                  window.open(url, '_blank', 'width=600,height=400');
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Facebook
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    alert('Link copiado para a área de transferência!');
+                  } catch (err) {
+                    console.error('Erro ao copiar:', err);
+                  }
+                }}
+                className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Copy size={18} />
+                Copiar Link
+              </button>
             </div>
-            <p className="text-xs text-green-600 mt-2">
-              Você será redirecionado para tonezi.com.br
-            </p>
           </div>
+          
+          <button
+            onClick={() => {
+              setSubmitted(false);
+              setFormData({
+                name: '',
+                phone: '',
+                birthDate: '',
+                street: '',
+                neighborhood: '',
+                city: '',
+                state: '',
+                zipCode: ''
+              });
+              setConsentAccepted(false);
+              setPhoneValidation({ isValid: null, message: '', isChecking: false });
+            }}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            Assinar novamente
+          </button>
         </div>
       </div>
     );
@@ -908,6 +950,26 @@ export const PublicPetition: React.FC = () => {
                 <p className="text-red-600 text-sm mt-2 ml-7">{formErrors.consent}</p>
               )}
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                    <p className="text-xs text-red-600 mt-1">
+                      Se o problema persistir, verifique sua conexão com a internet ou entre em contato com o responsável.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setError('')}
+                    className="text-red-400 hover:text-red-600"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="text-center pt-6">
               <button

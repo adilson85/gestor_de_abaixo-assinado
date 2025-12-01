@@ -244,43 +244,56 @@ export const getSignaturesByPetition = async (petitionId: string): Promise<Signa
 };
 
 export const saveSignature = async (petitionId: string, signature: Omit<Signature, 'id' | 'createdAt'>): Promise<Signature | null> => {
-  const signatureData = {
-    petition_id: petitionId,
-    name: signature.name,
-    phone: signature.phone,
-    street: signature.street || null,
-    neighborhood: signature.neighborhood || null,
-    city: signature.city || null,
-    state: signature.state || null,
-    zip_code: signature.zipCode || null,
-    birth_date: signature.birthDate ? signature.birthDate.toISOString().split('T')[0] : null,
-    mensagem_enviada: signature.mensagemEnviada || false,
-  };
+  try {
+    const signatureData = {
+      petition_id: petitionId,
+      name: signature.name,
+      phone: signature.phone,
+      street: signature.street || null,
+      neighborhood: signature.neighborhood || null,
+      city: signature.city || null,
+      state: signature.state || null,
+      zip_code: signature.zipCode || null,
+      birth_date: signature.birthDate ? signature.birthDate.toISOString().split('T')[0] : null,
+      mensagem_enviada: signature.mensagemEnviada || false,
+    };
 
-  const { data, error } = await supabase
-    .from('signatures')
-    .insert(signatureData)
-    .select()
-    .single();
+    console.log('Saving signature data:', signatureData);
 
-  if (error) {
-    console.error('Error saving signature:', error);
-    return null;
+    const { data, error } = await supabase
+      .from('signatures')
+      .insert(signatureData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving signature:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw new Error(error.message || 'Erro ao salvar assinatura');
+    }
+
+    if (!data) {
+      console.error('No data returned from insert');
+      throw new Error('Nenhum dado retornado ao salvar assinatura');
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      street: data.street || undefined,
+      neighborhood: data.neighborhood || undefined,
+      city: data.city || undefined,
+      state: data.state || undefined,
+      zipCode: data.zip_code || undefined,
+      birthDate: data.birth_date ? new Date(data.birth_date) : undefined,
+      mensagemEnviada: data.mensagem_enviada || false,
+      createdAt: new Date(data.created_at),
+    };
+  } catch (err: any) {
+    console.error('Exception in saveSignature:', err);
+    throw err; // Re-throw para que o componente possa capturar
   }
-
-  return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone,
-    street: data.street || undefined,
-    neighborhood: data.neighborhood || undefined,
-    city: data.city || undefined,
-    state: data.state || undefined,
-    zipCode: data.zip_code || undefined,
-    birthDate: data.birth_date ? new Date(data.birth_date) : undefined,
-    mensagemEnviada: data.mensagem_enviada || false,
-    createdAt: new Date(data.created_at),
-  };
 };
 
 export const checkPhoneDuplicate = async (petitionId: string, phone: string, excludeId?: string): Promise<boolean> => {
