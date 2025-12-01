@@ -8,3 +8,4 @@ ADD COLUMN IF NOT EXISTS birth_date DATE;
 -- Comentário explicativo
 COMMENT ON COLUMN signatures.birth_date IS 'Data de nascimento do signatário (opcional, apenas para assinaturas online)';
 
+
