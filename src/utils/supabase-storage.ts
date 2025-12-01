@@ -269,6 +269,17 @@ export const saveSignature = async (petitionId: string, signature: Omit<Signatur
     if (error) {
       console.error('Error saving signature:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // Verificar se é erro de duplicata (constraint UNIQUE)
+      if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        throw new Error('Este número de telefone já assinou este abaixo-assinado. Cada pessoa pode assinar apenas uma vez.');
+      }
+      
+      // Verificar se é erro de permissão (401/403)
+      if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('policy')) {
+        throw new Error('Erro de permissão. Verifique se as políticas RLS estão configuradas corretamente.');
+      }
+      
       throw new Error(error.message || 'Erro ao salvar assinatura');
     }
 
