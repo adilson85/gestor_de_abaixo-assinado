@@ -32,23 +32,25 @@ COMMENT ON POLICY "Enable public read for signature count" ON public.signatures 
 -- ============================================
 -- POLÍTICAS DE STORAGE PARA IMAGENS PÚBLICAS
 -- ============================================
-
--- Garantir que o bucket petition-images existe e é público
--- (Isso deve ser feito manualmente no Supabase Dashboard se o bucket não existir)
--- Storage → New bucket → petition-images → Public bucket: ON
-
--- Remover políticas antigas do storage se existirem
-DROP POLICY IF EXISTS "Public Access" ON storage.objects;
-DROP POLICY IF EXISTS "Public read for petition images" ON storage.objects;
-DROP POLICY IF EXISTS "Allow public read" ON storage.objects;
-
--- Política para permitir leitura pública de imagens no bucket petition-images
-CREATE POLICY "Public read for petition images" 
-ON storage.objects 
-FOR SELECT 
-USING (bucket_id = 'petition-images');
-
--- Comentário
-COMMENT ON POLICY "Public read for petition images" ON storage.objects IS 
-'Permite leitura pública de imagens de petições para exibição em páginas públicas e previews de redes sociais';
+-- 
+-- NOTA: Políticas de Storage precisam ser criadas manualmente no Supabase Dashboard
+-- pois requerem permissões de administrador.
+--
+-- INSTRUÇÕES MANUAIS:
+-- 1. Acesse: Supabase Dashboard → Storage → petition-images → Policies
+-- 2. Clique em "New policy" → "For full customization"
+-- 3. Configure:
+--    - Policy name: "Public read for petition images"
+--    - Allowed operation: SELECT
+--    - Target roles: public
+--    - USING expression: bucket_id = 'petition-images'
+-- 4. Salve a política
+--
+-- OU execute este SQL diretamente no SQL Editor (requer permissões de admin):
+--
+-- CREATE POLICY "Public read for petition images" 
+-- ON storage.objects 
+-- FOR SELECT 
+-- TO public
+-- USING (bucket_id = 'petition-images');
 
