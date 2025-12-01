@@ -7,6 +7,11 @@
   SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*,VITE_GOOGLE_MAPS_API_KEY"
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
+# Edge Functions - Meta tags dinâmicas para compartilhamento social
+[[edge_functions]]
+  function = "og-image"
+  path = "/petition/*"
+
 # Configuração de headers de segurança
 [[headers]]
   for = "/*"
@@ -16,7 +21,13 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Configuração para SPA
+# Configuração para SPA (exceto rotas de petição que são tratadas pela Edge Function)
+[[redirects]]
+  from = "/petition/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
