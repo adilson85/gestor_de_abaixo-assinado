@@ -253,6 +253,17 @@ export const PublicPetition: React.FC = () => {
 
       setPetition(petitionData);
       
+      // Debug: verificar URL da imagem
+      if (petitionData.imageUrl) {
+        console.log('Image URL:', petitionData.imageUrl);
+        // Verificar se a URL é válida
+        if (!petitionData.imageUrl.startsWith('http://') && !petitionData.imageUrl.startsWith('https://')) {
+          console.warn('Image URL não é absoluta:', petitionData.imageUrl);
+        }
+      } else {
+        console.log('Petition sem imagem');
+      }
+      
       // Carregar assinaturas para mostrar contador
       const signaturesData = await getSignaturesByPetition(petitionData.id);
       setSignatures(signaturesData);
@@ -598,12 +609,33 @@ export const PublicPetition: React.FC = () => {
             {/* Imagem do abaixo-assinado */}
             {petition?.imageUrl && (
               <div className="mb-6 sm:mb-8 px-2 sm:px-4">
-                <img
-                  src={petition.imageUrl}
-                  alt={petition.name}
-                  className="mx-auto w-full max-w-2xl rounded-xl shadow-2xl object-cover border-4 border-white/20"
-                  style={{ maxHeight: '400px' }}
-                />
+                <div className="relative mx-auto w-full max-w-2xl rounded-xl shadow-2xl border-4 border-white/20 overflow-hidden bg-white/10">
+                  <img
+                    src={petition.imageUrl}
+                    alt={petition.name}
+                    className="w-full h-auto object-cover"
+                    style={{ maxHeight: '400px', minHeight: '200px' }}
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', petition.imageUrl);
+                      const img = e.currentTarget;
+                      const container = img.parentElement;
+                      if (container) {
+                        container.innerHTML = `
+                          <div class="flex items-center justify-center p-8 text-white/80">
+                            <div class="text-center">
+                              <p class="text-sm mb-2">⚠️ Imagem não disponível</p>
+                              <p class="text-xs opacity-70">Verifique as permissões do Storage</p>
+                            </div>
+                          </div>
+                        `;
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('Imagem carregada com sucesso:', petition.imageUrl);
+                    }}
+                    loading="eager"
+                  />
+                </div>
               </div>
             )}
             
