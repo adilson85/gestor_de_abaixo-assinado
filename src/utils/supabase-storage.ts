@@ -253,6 +253,7 @@ export const saveSignature = async (petitionId: string, signature: Omit<Signatur
     city: signature.city || null,
     state: signature.state || null,
     zip_code: signature.zipCode || null,
+    birth_date: signature.birthDate ? signature.birthDate.toISOString().split('T')[0] : null,
     mensagem_enviada: signature.mensagemEnviada || false,
   };
 
@@ -276,6 +277,7 @@ export const saveSignature = async (petitionId: string, signature: Omit<Signatur
     city: data.city || undefined,
     state: data.state || undefined,
     zipCode: data.zip_code || undefined,
+    birthDate: data.birth_date ? new Date(data.birth_date) : undefined,
     mensagemEnviada: data.mensagem_enviada || false,
     createdAt: new Date(data.created_at),
   };

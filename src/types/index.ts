@@ -23,6 +23,7 @@ export interface Signature {
   city?: string;
   state?: string; // UF - 2 letters
   zipCode?: string; // CEP - 8 digits
+  birthDate?: Date; // Data de nascimento (apenas assinaturas online)
   mensagemEnviada?: boolean; // Se a mensagem foi enviada via WhatsApp
   createdAt: Date;
 }

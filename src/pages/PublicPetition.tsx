@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, MapPin, CheckCircle } from 'lucide-react';
+import { Users, MapPin, CheckCircle, AlertCircle, Check, X } from 'lucide-react';
 import { Petition, Signature } from '../types';
 import { getPetitionBySlug, saveSignature, getSignaturesByPetition, checkPhoneDuplicate } from '../utils/supabase-storage';
-import { validatePhone } from '../utils/validation';
+import { validatePhone, normalizePhone } from '../utils/validation';
 
 export const PublicPetition: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -19,6 +19,7 @@ export const PublicPetition: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    birthDate: '',
     street: '',
     neighborhood: '',
     city: '',
@@ -27,6 +28,11 @@ export const PublicPetition: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [consentAccepted, setConsentAccepted] = useState(false);
+  const [phoneValidation, setPhoneValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+    isChecking: boolean;
+  }>({ isValid: null, message: '', isChecking: false });
 
   useEffect(() => {
     if (slug) {
@@ -72,6 +78,108 @@ export const PublicPetition: React.FC = () => {
     }
   };
 
+  // Validação em tempo real do telefone
+  const validatePhoneRealTime = useCallback(async (phone: string, petitionData: Petition | null) => {
+    const cleanPhone = normalizePhone(phone);
+    
+    // Se estiver vazio, resetar validação
+    if (!cleanPhone) {
+      setPhoneValidation({ isValid: null, message: '', isChecking: false });
+      return;
+    }
+
+    // Validação básica de formato
+    const basicError = validatePhone(phone);
+    
+    if (basicError) {
+      // Mostrar dicas progressivas enquanto digita
+      if (cleanPhone.length < 2) {
+        setPhoneValidation({ isValid: null, message: 'Digite o DDD (2 dígitos)', isChecking: false });
+      } else if (cleanPhone.length < 3) {
+        const ddd = parseInt(cleanPhone.substring(0, 2));
+        if (ddd < 11 || ddd > 99) {
+          setPhoneValidation({ isValid: false, message: 'DDD inválido (deve ser 11 a 99)', isChecking: false });
+        } else {
+          setPhoneValidation({ isValid: null, message: 'Digite o 9 (obrigatório para celular)', isChecking: false });
+        }
+      } else if (cleanPhone.length === 3 && cleanPhone.charAt(2) !== '9') {
+        setPhoneValidation({ isValid: false, message: '❌ O número deve começar com 9 após o DDD', isChecking: false });
+      } else if (cleanPhone.length < 11) {
+        const remaining = 11 - cleanPhone.length;
+        setPhoneValidation({ isValid: null, message: `Faltam ${remaining} dígito${remaining > 1 ? 's' : ''}`, isChecking: false });
+      } else {
+        setPhoneValidation({ isValid: false, message: basicError, isChecking: false });
+      }
+      return;
+    }
+
+    // Se o formato está correto, verificar duplicidade
+    if (petitionData) {
+      setPhoneValidation({ isValid: null, message: 'Verificando número...', isChecking: true });
+      
+      try {
+        const isDuplicate = await checkPhoneDuplicate(petitionData.id, cleanPhone);
+        if (isDuplicate) {
+          setPhoneValidation({ 
+            isValid: false, 
+            message: '❌ Este número já assinou este abaixo-assinado', 
+            isChecking: false 
+          });
+        } else {
+          setPhoneValidation({ 
+            isValid: true, 
+            message: '✅ Número válido e disponível', 
+            isChecking: false 
+          });
+        }
+      } catch (err) {
+        setPhoneValidation({ 
+          isValid: true, 
+          message: '✅ Formato válido', 
+          isChecking: false 
+        });
+      }
+    } else {
+      setPhoneValidation({ isValid: true, message: '✅ Formato válido', isChecking: false });
+    }
+  }, []);
+
+  // Handler específico para o campo de telefone com máscara
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Remover tudo que não é número
+    const numbersOnly = value.replace(/\D/g, '');
+    
+    // Limitar a 11 dígitos
+    const limited = numbersOnly.slice(0, 11);
+    
+    // Aplicar máscara: (XX) XXXXX-XXXX
+    let formatted = '';
+    if (limited.length > 0) {
+      formatted = '(' + limited.substring(0, 2);
+    }
+    if (limited.length >= 2) {
+      formatted += ') ';
+    }
+    if (limited.length > 2) {
+      formatted += limited.substring(2, 7);
+    }
+    if (limited.length > 7) {
+      formatted += '-' + limited.substring(7, 11);
+    }
+    
+    setFormData(prev => ({ ...prev, phone: formatted }));
+    
+    // Limpar erro do campo
+    if (formErrors.phone) {
+      setFormErrors(prev => ({ ...prev, phone: '' }));
+    }
+    
+    // Validar em tempo real
+    validatePhoneRealTime(formatted, petition);
+  };
+
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const cep = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
     const formattedCEP = cep.replace(/(\d{5})(\d{3})/, '$1-$2'); // Formata como 00000-000
@@ -112,29 +220,50 @@ export const PublicPetition: React.FC = () => {
       }
     }
 
-    // Validar telefone celular
+    // Validar telefone celular usando a validação existente
     if (!formData.phone.trim()) {
       errors.phone = 'Telefone celular é obrigatório';
     } else {
       const phoneError = validatePhone(formData.phone);
       if (phoneError) {
         errors.phone = phoneError;
+      } else if (petition) {
+        // Verificar telefone duplicado (re-verificar no submit para garantir)
+        const cleanPhone = normalizePhone(formData.phone);
+        const isDuplicate = await checkPhoneDuplicate(petition.id, cleanPhone);
+        if (isDuplicate) {
+          errors.phone = 'Este número já foi cadastrado neste abaixo-assinado';
+          setPhoneValidation({ 
+            isValid: false, 
+            message: '❌ Este número já assinou este abaixo-assinado', 
+            isChecking: false 
+          });
+        }
+      }
+    }
+
+    // Validar data de nascimento (obrigatório para assinatura online)
+    if (!formData.birthDate) {
+      errors.birthDate = 'Data de nascimento é obrigatória';
+    } else {
+      const birthDate = new Date(formData.birthDate);
+      const today = new Date();
+      const minDate = new Date('1900-01-01');
+      
+      if (birthDate > today) {
+        errors.birthDate = 'Data de nascimento não pode ser no futuro';
+      } else if (birthDate < minDate) {
+        errors.birthDate = 'Data de nascimento inválida';
       } else {
-        // Verificar se é celular (deve ter 9 dígitos após DDD)
-        const cleanPhone = formData.phone.replace(/\D/g, '');
-        if (cleanPhone.length === 11) {
-          const ninthDigit = cleanPhone[2]; // Terceiro dígito após DDD
-          if (ninthDigit !== '9') {
-            errors.phone = 'Digite um número de celular válido (deve começar com 9)';
-          } else if (petition) {
-            // Verificar telefone duplicado
-            const isDuplicate = await checkPhoneDuplicate(petition.id, cleanPhone);
-            if (isDuplicate) {
-              errors.phone = 'Este número já foi cadastrado neste abaixo-assinado';
-            }
-          }
-        } else {
-          errors.phone = 'Digite um número de celular válido (11 dígitos)';
+        // Verificar se a pessoa tem pelo menos 16 anos (idade mínima para assinar)
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
+          ? age - 1 
+          : age;
+        
+        if (actualAge < 16) {
+          errors.birthDate = 'É necessário ter pelo menos 16 anos para assinar';
         }
       }
     }
@@ -161,6 +290,7 @@ export const PublicPetition: React.FC = () => {
       const signatureData = {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
+        birthDate: formData.birthDate ? new Date(formData.birthDate) : undefined,
         street: formData.street.trim() || undefined,
         neighborhood: formData.neighborhood.trim() || undefined,
         city: formData.city.trim() || undefined,
@@ -257,6 +387,19 @@ export const PublicPetition: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 py-16">
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-4">ABAIXO-ASSINADO</h1>
+            
+            {/* Imagem do abaixo-assinado */}
+            {petition?.imageUrl && (
+              <div className="mb-8 px-4">
+                <img
+                  src={petition.imageUrl}
+                  alt={petition.name}
+                  className="mx-auto w-full max-w-2xl rounded-xl shadow-2xl object-cover border-4 border-white/20"
+                  style={{ maxHeight: '450px' }}
+                />
+              </div>
+            )}
+            
             <h2 className="text-3xl font-bold mb-6">{petition?.name}</h2>
             
             {petition?.description && (
@@ -318,22 +461,86 @@ export const PublicPetition: React.FC = () => {
 
               <div className="md:col-span-2">
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone Celular *
+                  Telefone Celular (WhatsApp) *
                 </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.phone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="(11) 99999-9999"
-                />
-                {formErrors.phone && (
+                <div className="relative">
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      formErrors.phone 
+                        ? 'border-red-500 bg-red-50' 
+                        : phoneValidation.isValid === true 
+                          ? 'border-green-500 bg-green-50' 
+                          : phoneValidation.isValid === false 
+                            ? 'border-red-500 bg-red-50'
+                            : 'border-gray-300'
+                    }`}
+                    placeholder="(47) 99999-9999"
+                    maxLength={15}
+                    inputMode="numeric"
+                    autoComplete="tel"
+                  />
+                  {/* Ícone de validação */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    {phoneValidation.isChecking ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    ) : phoneValidation.isValid === true ? (
+                      <Check className="h-5 w-5 text-green-500" />
+                    ) : phoneValidation.isValid === false ? (
+                      <X className="h-5 w-5 text-red-500" />
+                    ) : formData.phone.length > 0 ? (
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                    ) : null}
+                  </div>
+                </div>
+                {/* Mensagem de validação em tempo real */}
+                {phoneValidation.message && (
+                  <p className={`text-sm mt-1 transition-colors ${
+                    phoneValidation.isValid === true 
+                      ? 'text-green-600' 
+                      : phoneValidation.isValid === false 
+                        ? 'text-red-600 font-medium'
+                        : 'text-gray-500'
+                  }`}>
+                    {phoneValidation.message}
+                  </p>
+                )}
+                {formErrors.phone && !phoneValidation.message && (
                   <p className="text-red-600 text-sm mt-1">{formErrors.phone}</p>
                 )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Formato: (DDD) 9XXXX-XXXX - Apenas celulares com WhatsApp
+                </p>
+              </div>
+
+              {/* Data de Nascimento */}
+              <div className="md:col-span-2">
+                <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data de Nascimento *
+                </label>
+                <input
+                  type="date"
+                  id="birthDate"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleInputChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    formErrors.birthDate ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  required
+                />
+                {formErrors.birthDate && (
+                  <p className="text-red-600 text-sm mt-1">{formErrors.birthDate}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Sua data de nascimento é necessária para validar sua identidade
+                </p>
               </div>
 
               {/* CEP primeiro para busca automática */}

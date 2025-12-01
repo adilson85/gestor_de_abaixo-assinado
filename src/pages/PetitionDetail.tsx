@@ -42,8 +42,10 @@ import { validateName, validatePhone, validateState, validateZipCode, normalizeP
 import { fetchAddressByCEP, formatCEP } from '../utils/cep';
 import { Pagination } from '../components/Pagination';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
+import { ImageUpload } from '../components/ImageUpload';
 import { useDebounce } from '../hooks/useDebounce';
 import { getPetitionResources, addPetitionResource, deletePetitionResource } from '../utils/supabase-storage';
+import { uploadImage, deleteImage } from '../utils/image-storage';
 
 export const PetitionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,6 +100,11 @@ export const PetitionDetail: React.FC = () => {
   const [editLocation, setEditLocation] = useState('');
   const [editCollectionDate, setEditCollectionDate] = useState('');
   const [editResponsible, setEditResponsible] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState<string | undefined>('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | undefined>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -118,6 +125,8 @@ export const PetitionDetail: React.FC = () => {
         setEditLocation(currentPetition.location || '');
         setEditCollectionDate(currentPetition.collectionDate ? currentPetition.collectionDate.toISOString().split('T')[0] : '');
         setEditResponsible(currentPetition.responsible || '');
+        setEditImageUrl(currentPetition.imageUrl);
+        setImagePreview(currentPetition.imageUrl);
         
         const petitionSignatures = await getSignaturesByPetition(currentPetition.id);
         setSignatures(petitionSignatures);
@@ -322,23 +331,76 @@ export const PetitionDetail: React.FC = () => {
       return;
     }
 
-    const updates = {
-      name: editName.trim(),
-      description: editDescription.trim() || undefined,
-      location: editLocation.trim() || undefined,
-      collectionDate: editCollectionDate ? new Date(editCollectionDate) : undefined,
-      responsible: editResponsible.trim() || undefined,
-    };
-
     try {
+      setIsUploadingImage(true);
+      
+      let newImageUrl = editImageUrl;
+      
+      // Se há uma nova imagem para upload
+      if (editImageFile) {
+        // Se já existe uma imagem anterior, deletar do storage
+        if (petition.imageUrl) {
+          await deleteImage(petition.imageUrl);
+        }
+        
+        // Fazer upload da nova imagem
+        const uploadResult = await uploadImage(editImageFile);
+        if (uploadResult.success && uploadResult.url) {
+          newImageUrl = uploadResult.url;
+          setUploadError('');
+        } else {
+          console.error('Erro ao fazer upload da imagem:', uploadResult.error);
+          setUploadError(uploadResult.error || 'Erro ao fazer upload da imagem');
+          setIsUploadingImage(false);
+          return;
+        }
+      }
+      
+      // Se a imagem foi removida (imagePreview é undefined mas havia uma imagem antes)
+      if (!imagePreview && petition.imageUrl) {
+        await deleteImage(petition.imageUrl);
+        newImageUrl = undefined;
+      }
+
+      const updates = {
+        name: editName.trim(),
+        description: editDescription.trim() || undefined,
+        location: editLocation.trim() || undefined,
+        collectionDate: editCollectionDate ? new Date(editCollectionDate) : undefined,
+        responsible: editResponsible.trim() || undefined,
+        imageUrl: newImageUrl,
+      };
+
       const updatedPetition = await updatePetition(petition.id, updates);
       if (updatedPetition) {
         setPetition(updatedPetition);
+        setEditImageFile(null);
         setIsEditing(false);
       }
     } catch (error) {
       console.error('Error updating petition:', error);
+    } finally {
+      setIsUploadingImage(false);
     }
+  };
+
+  // Handler para upload de imagem
+  const handleImageUpload = (file: File) => {
+    setEditImageFile(file);
+    setUploadError(''); // Limpar erro anterior
+    // Criar preview local
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handler para remover imagem
+  const handleImageRemove = () => {
+    setEditImageFile(null);
+    setImagePreview(undefined);
+    setEditImageUrl(undefined);
   };
 
   const handleToggleOnlineAvailability = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1238,12 +1300,45 @@ export const PetitionDetail: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
+                
+                {/* Upload de Imagem */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Imagem do Abaixo-Assinado (exibida na página pública)
+                  </label>
+                  <ImageUpload
+                    onImageUpload={handleImageUpload}
+                    onImageRemove={handleImageRemove}
+                    currentImage={imagePreview}
+                    maxSize={5}
+                    acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Esta imagem será exibida na página pública de assinatura online
+                  </p>
+                  {uploadError && (
+                    <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
+                      <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                        ⚠️ {uploadError}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    disabled={isUploadingImage}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Salvar
+                    {isUploadingImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar'
+                    )}
                   </button>
                   <button
                     type="button"

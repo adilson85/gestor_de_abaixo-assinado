@@ -21,7 +21,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const [error, setError] = useState<string>('');
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: Array<{ file: File; errors: Array<{ code: string; message: string }> }>) => {
     setError('');
     
     if (rejectedFiles.length > 0) {
@@ -63,18 +63,19 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <img
               src={currentImage}
               alt="Abaixo-assinado"
-              className="w-full h-64 object-cover rounded-lg border border-gray-200"
+              className="w-full h-64 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
             />
             <button
               onClick={handleRemove}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
               type="button"
+              title="Remover imagem"
             >
-              <X size={16} />
+              <X size={20} />
             </button>
           </div>
-          <p className="text-sm text-gray-600 text-center">
-            Clique na imagem para alterar
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">
+            Passe o mouse sobre a imagem para ver o botão de remover
           </p>
         </div>
       ) : (
@@ -83,10 +84,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
             ${isDragActive 
-              ? 'border-blue-500 bg-blue-50' 
-              : 'border-gray-300 hover:border-gray-400'
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' 
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-800'
             }
-            ${error ? 'border-red-500 bg-red-50' : ''}
+            ${error ? 'border-red-500 bg-red-50 dark:bg-red-900/30' : ''}
           `}
         >
           <input {...getInputProps()} />
@@ -94,13 +95,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             {isDragActive ? (
               <Upload size={48} className="text-blue-500" />
             ) : (
-              <ImageIcon size={48} className="text-gray-400" />
+              <ImageIcon size={48} className="text-gray-400 dark:text-gray-500" />
             )}
             <div>
-              <p className="text-lg font-medium text-gray-900">
+              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {isDragActive ? 'Solte a imagem aqui' : 'Arraste uma imagem ou clique para selecionar'}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 JPG, PNG ou WebP até {maxSize}MB
               </p>
             </div>
@@ -109,7 +110,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       )}
 
       {error && (
-        <div className="flex items-center gap-2 text-red-600 text-sm">
+        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
           <AlertCircle size={16} />
           {error}
         </div>
