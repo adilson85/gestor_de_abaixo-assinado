@@ -245,10 +245,13 @@ export const getSignaturesByPetition = async (petitionId: string): Promise<Signa
 
 export const saveSignature = async (petitionId: string, signature: Omit<Signature, 'id' | 'createdAt'>): Promise<Signature | null> => {
   try {
+    // Normalizar telefone (remover formatação) para garantir consistência nas comparações
+    const normalizedPhone = signature.phone.replace(/\D/g, '');
+    
     const signatureData = {
       petition_id: petitionId,
       name: signature.name,
-      phone: signature.phone,
+      phone: normalizedPhone, // Salvar apenas números
       street: signature.street || null,
       neighborhood: signature.neighborhood || null,
       city: signature.city || null,
@@ -308,11 +311,16 @@ export const saveSignature = async (petitionId: string, signature: Omit<Signatur
 };
 
 export const checkPhoneDuplicate = async (petitionId: string, phone: string, excludeId?: string): Promise<boolean> => {
+  // Normalizar telefone para busca (remover formatação)
+  const normalizedPhone = phone.replace(/\D/g, '');
+  
+  console.log('Checking phone duplicate:', { petitionId, phone, normalizedPhone, excludeId });
+  
   let query = supabase
     .from('signatures')
     .select('id')
     .eq('petition_id', petitionId)
-    .eq('phone', phone);
+    .eq('phone', normalizedPhone);
 
   if (excludeId) {
     query = query.neq('id', excludeId);
@@ -322,9 +330,12 @@ export const checkPhoneDuplicate = async (petitionId: string, phone: string, exc
 
   if (error) {
     console.error('Error checking phone duplicate:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return false;
   }
 
+  console.log('Phone duplicate check result:', { found: data?.length || 0, data });
+  
   return data && data.length > 0;
 };
 
