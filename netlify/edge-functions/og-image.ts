@@ -13,6 +13,7 @@ interface Petition {
   location: string | null;
   image_url: string | null;
   responsible: string | null;
+  available_online: boolean;
 }
 
 async function getPetitionBySlug(slug: string): Promise<Petition | null> {
@@ -22,13 +23,15 @@ async function getPetitionBySlug(slug: string): Promise<Petition | null> {
   }
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/petitions?slug=eq.${encodeURIComponent(slug)}&select=id,slug,name,description,location,image_url,responsible&limit=1`;
+    // Buscar apenas petições disponíveis online
+    const url = `${SUPABASE_URL}/rest/v1/petitions?slug=eq.${encodeURIComponent(slug)}&available_online=eq.true&select=id,slug,name,description,location,image_url,responsible,available_online&limit=1`;
     
     const response = await fetch(url, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
+        "Prefer": "return=representation",
       },
     });
 
@@ -124,6 +127,12 @@ export default async function handler(request: Request, context: Context) {
 
   if (!petition) {
     console.error("Petition not found, falling back to SPA");
+    return context.next();
+  }
+  
+  // Verificar se a petição está disponível online
+  if (!petition.available_online) {
+    console.error("Petition not available online, falling back to SPA");
     return context.next();
   }
   
