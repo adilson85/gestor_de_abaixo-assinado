@@ -146,8 +146,24 @@ export default async function handler(request: Request, context: Context) {
   const description = petition.description 
     ? `${petition.description.substring(0, 200)}${petition.description.length > 200 ? '...' : ''}`
     : `Assine este abaixo-assinado e ajude a fazer a diferença. Já são ${signatureCount} assinaturas!`;
-  const image = petition.image_url || `${url.origin}/icon-512x512.png`;
+  
+  // Garantir que a URL da imagem seja absoluta
+  let image = `${url.origin}/icon-512x512.png`; // Fallback padrão
+  if (petition.image_url) {
+    // Se a URL já for absoluta, usar diretamente
+    if (petition.image_url.startsWith('http://') || petition.image_url.startsWith('https://')) {
+      image = petition.image_url;
+    } else {
+      // Se for relativa, tornar absoluta
+      image = petition.image_url.startsWith('/') 
+        ? `${url.origin}${petition.image_url}`
+        : `${url.origin}/${petition.image_url}`;
+    }
+  }
+  
   const pageUrl = `${url.origin}/petition/${slug}`;
+  
+  console.log("Image URL:", image);
 
   // Gerar HTML com meta tags para crawlers
   const html = `<!DOCTYPE html>

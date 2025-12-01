@@ -28,3 +28,26 @@ COMMENT ON POLICY "Enable public read for available online petitions" ON public.
 COMMENT ON POLICY "Enable public read for signature count" ON public.signatures IS 
 'Permite leitura pública de assinaturas para contagem exibida nas páginas públicas';
 
+-- ============================================
+-- POLÍTICAS DE STORAGE PARA IMAGENS PÚBLICAS
+-- ============================================
+
+-- Garantir que o bucket petition-images existe e é público
+-- (Isso deve ser feito manualmente no Supabase Dashboard se o bucket não existir)
+-- Storage → New bucket → petition-images → Public bucket: ON
+
+-- Remover políticas antigas do storage se existirem
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public read for petition images" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read" ON storage.objects;
+
+-- Política para permitir leitura pública de imagens no bucket petition-images
+CREATE POLICY "Public read for petition images" 
+ON storage.objects 
+FOR SELECT 
+USING (bucket_id = 'petition-images');
+
+-- Comentário
+COMMENT ON POLICY "Public read for petition images" ON storage.objects IS 
+'Permite leitura pública de imagens de petições para exibição em páginas públicas e previews de redes sociais';
+
