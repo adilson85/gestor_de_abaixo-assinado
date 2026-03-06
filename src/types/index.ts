@@ -173,3 +173,10 @@ export interface KanbanActivity {
     email: string;
   };
 }
+
+export interface AdminUser {
+  id: string;
+  userId: string;
+  email: string;
+  createdAt: Date;
+}

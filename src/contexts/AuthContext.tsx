@@ -40,7 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           '24151887-fefb-44fe-a2e3-1eef585a9468', // adilson.martins.jlle@gmail.com
           'd3a95b1a-bdec-48a2-b51b-2bcc5d9b0e13', // admin@teste.com (Supabase Local - ID atual)
           'eea6867e-e65f-4986-8aa1-9ea60e42c5f6', // andrevitorgoedert4@hotmail.com
-          '5e65d48c-051d-4a24-9d00-51d9f0b985e8'  // mkargel@gmail.com
+          '5e65d48c-051d-4a24-9d00-51d9f0b985e8', // mkargel@gmail.com
+          '9945a621-fbbb-4d33-b25c-bb261d34cd7f', // santilanamdsp1011@gmail.com
         ];
         
         const isAdminUser = adminUserIds.includes(userId);

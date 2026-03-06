@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Database, Download, Upload, AlertTriangle, Clock, Save } from 'lucide-react';
+import { Settings as SettingsIcon, Database, Download, Upload, AlertTriangle, Clock, Save, Users, UserPlus, Trash2, Mail, X, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getGlobalKanbanBoard, getKanbanColumns, getColumnDeadlines, saveColumnDeadline } from '../utils/kanban-storage';
-import { KanbanColumn, KanbanColumnDeadline } from '../types';
+import { KanbanColumn, KanbanColumnDeadline, AdminUser } from '../types';
 
 export const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,10 +11,19 @@ export const Settings: React.FC = () => {
   const [editingDeadlines, setEditingDeadlines] = useState<Map<string, { value: number; unit: 'days' | 'months' | 'years' }>>(new Map());
   const [savingDeadline, setSavingDeadline] = useState<string | null>(null);
   const [loadingDeadlines, setLoadingDeadlines] = useState(true);
+  const [showDeadlinesModal, setShowDeadlinesModal] = useState(false);
+  
+  // Estados para gerenciamento de administradores
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [deletingAdminId, setDeletingAdminId] = useState<string | null>(null);
 
-  // Carregar colunas e prazos
+  // Carregar colunas, prazos e administradores
   useEffect(() => {
     loadDeadlinesConfig();
+    loadAdmins();
   }, []);
 
   const loadDeadlinesConfig = async () => {
@@ -54,6 +63,135 @@ export const Settings: React.FC = () => {
       console.error('Erro ao carregar configurações de prazos:', error);
     } finally {
       setLoadingDeadlines(false);
+    }
+  };
+
+  // Funções para gerenciamento de administradores
+  const loadAdmins = async () => {
+    try {
+      setLoadingAdmins(true);
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar administradores:', error);
+        return;
+      }
+
+      const formattedAdmins: AdminUser[] = (data || []).map(admin => ({
+        id: admin.id,
+        userId: admin.user_id,
+        email: admin.email,
+        createdAt: new Date(admin.created_at)
+      }));
+
+      setAdmins(formattedAdmins);
+    } catch (error) {
+      console.error('Erro ao carregar administradores:', error);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail.trim()) {
+      alert('Por favor, informe o e-mail do administrador.');
+      return;
+    }
+
+    // Validar formato de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newAdminEmail.trim())) {
+      alert('Por favor, informe um e-mail válido.');
+      return;
+    }
+
+    // Verificar se já existe
+    const existingAdmin = admins.find(
+      admin => admin.email.toLowerCase() === newAdminEmail.trim().toLowerCase()
+    );
+    if (existingAdmin) {
+      alert('Este e-mail já está cadastrado como administrador.');
+      return;
+    }
+
+    setAddingAdmin(true);
+    try {
+      // Primeiro, verificar se o usuário existe no auth.users
+      // Como não temos acesso direto ao auth.users, vamos apenas cadastrar o email
+      // O user_id será preenchido quando o usuário fizer login
+      
+      const { data, error } = await supabase
+        .from('admin_users')
+        .insert({
+          user_id: crypto.randomUUID(), // Temporário - será atualizado quando o usuário logar
+          email: newAdminEmail.trim().toLowerCase()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          alert('Este e-mail já está cadastrado como administrador.');
+        } else {
+          console.error('Erro ao adicionar administrador:', error);
+          alert('Erro ao adicionar administrador. Tente novamente.');
+        }
+        return;
+      }
+
+      const newAdmin: AdminUser = {
+        id: data.id,
+        userId: data.user_id,
+        email: data.email,
+        createdAt: new Date(data.created_at)
+      };
+
+      setAdmins([newAdmin, ...admins]);
+      setNewAdminEmail('');
+      alert('Administrador adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar administrador:', error);
+      alert('Erro ao adicionar administrador. Tente novamente.');
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId: string, adminEmail: string) => {
+    // Verificar se é o próprio usuário
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email?.toLowerCase() === adminEmail.toLowerCase()) {
+      alert('Você não pode remover a si mesmo como administrador.');
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja remover "${adminEmail}" da lista de administradores?`)) {
+      return;
+    }
+
+    setDeletingAdminId(adminId);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', adminId);
+
+      if (error) {
+        console.error('Erro ao remover administrador:', error);
+        alert('Erro ao remover administrador. Tente novamente.');
+        return;
+      }
+
+      setAdmins(admins.filter(admin => admin.id !== adminId));
+      alert('Administrador removido com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover administrador:', error);
+      alert('Erro ao remover administrador. Tente novamente.');
+    } finally {
+      setDeletingAdminId(null);
     }
   };
 
@@ -258,106 +396,135 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
+        {/* Botão para abrir modal de Prazos Kanban */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
+          <button
+            onClick={() => setShowDeadlinesModal(true)}
+            className="w-full flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <Clock size={24} className="text-blue-600" />
+              <div className="text-left">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Prazos das Tarefas Kanban</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Configure o prazo de vencimento automático para cada etapa
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={24} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
+          </button>
+        </div>
+
+        {/* Seção de Gerenciamento de Administradores */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
-            <Clock size={24} className="text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Prazos das Tarefas Kanban</h2>
+            <Users size={24} className="text-purple-600" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Administradores</h2>
           </div>
           
-          <p className="text-sm text-gray-600 mb-4 dark:text-gray-300">
-            Configure o prazo de vencimento automático para cada etapa do Kanban. Quando uma tarefa é movida para uma coluna, o prazo será calculado automaticamente com base na configuração abaixo.
+          <p className="text-sm text-gray-600 mb-6 dark:text-gray-300">
+            Gerencie os usuários que têm acesso administrativo ao sistema. Apenas administradores cadastrados podem acessar o painel.
           </p>
 
-          {loadingDeadlines ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          {/* Formulário para adicionar novo administrador */}
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-900 mb-3 dark:text-white flex items-center gap-2">
+              <UserPlus size={18} />
+              Adicionar Novo Administrador
+            </h3>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <div className="relative">
+                  <Mail size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddAdmin();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleAddAdmin}
+                disabled={addingAdmin || !newAdminEmail.trim()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingAdmin ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Adicionando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} />
+                    Adicionar
+                  </>
+                )}
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {columns.map((column) => {
-                const deadline = deadlines.get(column.id);
-                const editing = editingDeadlines.get(column.id) || { value: 30, unit: 'days' as const };
-                const isSaving = savingDeadline === column.id;
-                const hasChanged = !deadline || 
-                  deadline.durationValue !== editing.value || 
-                  deadline.durationUnit !== editing.unit;
+          </div>
 
-                return (
+          <hr className="border-gray-200 dark:border-gray-700 mb-6" />
+
+          {/* Lista de administradores */}
+          <div>
+            <h3 className="font-medium text-gray-900 mb-3 dark:text-white">
+              Lista de Administradores ({admins.length})
+            </h3>
+
+            {loadingAdmins ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              </div>
+            ) : admins.length === 0 ? (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                Nenhum administrador cadastrado.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {admins.map((admin) => (
                   <div
-                    key={column.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                    key={admin.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-gray-900 dark:text-white">
-                        {column.name}
-                      </h3>
-                      {deadline && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          Prazo atual: {deadline.durationValue} {deadline.durationUnit === 'days' ? 'dias' : deadline.durationUnit === 'months' ? 'meses' : 'anos'}
-                        </span>
-                      )}
-                    </div>
-
                     <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Duração
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={editing.value}
-                          onChange={(e) => handleDeadlineChange(column.id, 'value', parseInt(e.target.value) || 1)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                      <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                        <span className="text-purple-600 dark:text-purple-300 font-semibold text-sm">
+                          {admin.email.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Unidade
-                        </label>
-                        <select
-                          value={editing.unit}
-                          onChange={(e) => handleDeadlineChange(column.id, 'unit', e.target.value as 'days' | 'months' | 'years')}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="days">Dias</option>
-                          <option value="months">Meses</option>
-                          <option value="years">Anos</option>
-                        </select>
-                      </div>
-
-                      <div className="flex items-end">
-                        <button
-                          onClick={() => handleSaveDeadline(column.id)}
-                          disabled={isSaving || !hasChanged}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isSaving ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              Salvando...
-                            </>
-                          ) : (
-                            <>
-                              <Save size={16} />
-                              Salvar
-                            </>
-                          )}
-                        </button>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {admin.email}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Adicionado em {admin.createdAt.toLocaleDateString('pt-BR')}
+                        </p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => handleDeleteAdmin(admin.id, admin.email)}
+                      disabled={deletingAdminId === admin.id}
+                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+                      title="Remover administrador"
+                    >
+                      {deletingAdminId === admin.id ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                      ) : (
+                        <Trash2 size={20} />
+                      )}
+                    </button>
                   </div>
-                );
-              })}
-
-              {columns.length === 0 && (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                  Nenhuma coluna encontrada. Crie colunas no Kanban primeiro.
-                </p>
-              )}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
@@ -375,6 +542,144 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Prazos das Tarefas Kanban */}
+      {showDeadlinesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDeadlinesModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <Clock size={24} className="text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Prazos das Tarefas Kanban
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowDeadlinesModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <p className="text-sm text-gray-600 mb-6 dark:text-gray-300">
+                Configure o prazo de vencimento automático para cada etapa do Kanban. Quando uma tarefa é movida para uma coluna, o prazo será calculado automaticamente com base na configuração abaixo.
+              </p>
+
+              {loadingDeadlines ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {columns.map((column) => {
+                    const deadline = deadlines.get(column.id);
+                    const editing = editingDeadlines.get(column.id) || { value: 30, unit: 'days' as const };
+                    const isSaving = savingDeadline === column.id;
+                    const hasChanged = !deadline || 
+                      deadline.durationValue !== editing.value || 
+                      deadline.durationUnit !== editing.unit;
+
+                    return (
+                      <div
+                        key={column.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            {column.name}
+                          </h3>
+                          {deadline && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Prazo atual: {deadline.durationValue} {deadline.durationUnit === 'days' ? 'dias' : deadline.durationUnit === 'months' ? 'meses' : 'anos'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Duração
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={editing.value}
+                              onChange={(e) => handleDeadlineChange(column.id, 'value', parseInt(e.target.value) || 1)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Unidade
+                            </label>
+                            <select
+                              value={editing.unit}
+                              onChange={(e) => handleDeadlineChange(column.id, 'unit', e.target.value as 'days' | 'months' | 'years')}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="days">Dias</option>
+                              <option value="months">Meses</option>
+                              <option value="years">Anos</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-end">
+                            <button
+                              onClick={() => handleSaveDeadline(column.id)}
+                              disabled={isSaving || !hasChanged}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isSaving ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  Salvando...
+                                </>
+                              ) : (
+                                <>
+                                  <Save size={16} />
+                                  Salvar
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {columns.length === 0 && (
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                      Nenhuma coluna encontrada. Crie colunas no Kanban primeiro.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowDeadlinesModal(false)}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

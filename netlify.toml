@@ -4,13 +4,26 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*,VITE_GOOGLE_MAPS_API_KEY"
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIza*,VITE_GOOGLE_MAPS_API_KEY,SUPABASE_SERVICE_ROLE_KEY"
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 # Edge Functions - Meta tags dinâmicas para compartilhamento social
 [[edge_functions]]
   function = "og-image"
   path = "/petition/*"
+
+# Edge Functions - Gerenciamento de Administradores
+[[edge_functions]]
+  function = "admin-management/add-admin"
+  path = "/api/admin-management/add-admin"
+
+[[edge_functions]]
+  function = "admin-management/remove-admin"
+  path = "/api/admin-management/remove-admin"
+
+[[edge_functions]]
+  function = "admin-management/check-admin"
+  path = "/api/admin-management/check-admin"
 
 # Configuração de headers de segurança
 [[headers]]
@@ -20,6 +33,14 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Headers CORS para Edge Functions (APIs)
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
 
 # Configuração para SPA (exceto rotas de petição que são tratadas pela Edge Function)
 [[redirects]]
