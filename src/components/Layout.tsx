@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { PWANotifications } from './PWANotifications';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Settings, 
-  Menu, 
-  X,
-  Users,
+import {
+  CheckCircle,
+  FileText,
+  LayoutDashboard,
   LogOut,
+  Menu,
   Moon,
+  Settings,
   Sun,
-  CheckCircle
+  Users,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
-// PWANotifications ativo - notificações de atualização PWA funcionando
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { PWANotifications } from './PWANotifications';
+import { BrandLogo } from './BrandLogo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,7 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/petitions', label: 'Abaixo-Assinados', icon: FileText },
+    { path: '/petitions', label: 'Campanhas', icon: FileText },
     { path: '/tasks', label: 'Tarefas', icon: CheckCircle },
     { path: '/settings', label: 'Configurações', icon: Settings },
   ];
@@ -42,34 +42,50 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* PWA Notifications */}
       <PWANotifications />
-      
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 z-20 lg:hidden"
+
+      {sidebarOpen ? (
+        <div
+          className="fixed inset-0 z-20 bg-gray-600 bg-opacity-50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
-      )}
+      ) : null}
 
-      {/* Sidebar */}
-      <div className={clsx(
-        'fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      )}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Digitalização de Abaixo-Assinados</h1>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
-          >
-            <X size={20} />
-          </button>
+      <div
+        className={clsx(
+          'fixed inset-y-0 left-0 z-30 w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out dark:bg-gray-800 lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="border-b border-gray-200 px-6 py-5 dark:border-gray-700">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <BrandLogo dark={theme === 'dark'} className="w-[164px]" />
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-blue-600 dark:text-blue-300">
+                Painel administrativo
+              </p>
+              <p className="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">
+                Gestão de campanhas, assinaturas e equipes.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white lg:hidden"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
-        
+
+        <div className="px-6 pt-5">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-100">
+            Tudo em um só lugar para operar mobilizações do AssinaPovo.
+          </div>
+        </div>
+
         <nav className="mt-6">
-          {menuItems.map(item => (
+          {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
@@ -77,7 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               className={clsx(
                 'flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200',
                 isActive(item.path)
-                  ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  ? 'border-r-4 border-blue-700 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
               )}
             >
@@ -88,23 +104,32 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
       </div>
 
-      {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Menu size={24} />
-            </button>
-            
+        <div className="border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 lg:hidden"
+              >
+                <Menu size={24} />
+              </button>
+
+              <div className="hidden sm:block">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+                  AssinaPovo Admin
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Operação das campanhas e assinaturas
+                </p>
+              </div>
+            </div>
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               </button>
@@ -114,7 +139,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 px-3 py-1 rounded-lg hover:bg-gray-100 transition-colors dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                className="flex items-center gap-2 rounded-lg px-3 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                 title="Sair do sistema"
               >
                 <LogOut size={16} />
@@ -124,10 +149,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* Page content */}
-        <main className="py-6 px-4 sm:px-6 lg:px-8">
-          {children}
-        </main>
+        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

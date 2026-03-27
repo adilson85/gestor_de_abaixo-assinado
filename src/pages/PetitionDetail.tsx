@@ -46,6 +46,8 @@ import { ImageUpload } from '../components/ImageUpload';
 import { useDebounce } from '../hooks/useDebounce';
 import { getPetitionResources, addPetitionResource, deletePetitionResource } from '../utils/supabase-storage';
 import { uploadImage, deleteImage } from '../utils/image-storage';
+import { getPublicPetitionUrl } from '../utils/public-url';
+import { getPublicationChecklist, isPublicationReady } from '../utils/publication-readiness';
 
 export const PetitionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +62,7 @@ export const PetitionDetail: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const itemsPerPage = 10;
+  const publicPetitionUrl = petition ? getPublicPetitionUrl(petition.slug) : '';
 
   // Debounce search term for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -106,6 +109,24 @@ export const PetitionDetail: React.FC = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
+  const [availabilityFeedback, setAvailabilityFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  const showAvailabilityFeedback = (type: 'success' | 'error' | 'info', message: string) => {
+    setAvailabilityFeedback({ type, message });
+    window.setTimeout(() => {
+      setAvailabilityFeedback((current) => (current?.message === message ? null : current));
+    }, 3500);
+  };
+
+  const handleCopyToClipboard = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showAvailabilityFeedback('success', successMessage);
+    } catch (error) {
+      console.error('Error copying text to clipboard:', error);
+      showAvailabilityFeedback('error', 'NÃ£o foi possÃ­vel copiar agora. Tente novamente.');
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -331,6 +352,23 @@ export const PetitionDetail: React.FC = () => {
       return;
     }
 
+    const nextImageCandidate = editImageFile ? 'pending-image' : imagePreview;
+    const nextPublicationReady = isPublicationReady({
+      name: editName,
+      slug: petition.slug,
+      description: editDescription,
+      imageUrl: nextImageCandidate,
+      isSlugUnique: true,
+    });
+
+    if (petition.availableOnline && !nextPublicationReady) {
+      showAvailabilityFeedback(
+        'error',
+        'A página pública está ativa. Complete o checklist mínimo antes de salvar as alterações.'
+      );
+      return;
+    }
+
     try {
       setIsUploadingImage(true);
       
@@ -374,6 +412,11 @@ export const PetitionDetail: React.FC = () => {
       const updatedPetition = await updatePetition(petition.id, updates);
       if (updatedPetition) {
         setPetition(updatedPetition);
+        if (newAvailability) {
+          showAvailabilityFeedback('success', `Página pública ativada: ${getPublicPetitionUrl(petition.slug)}`);
+        } else {
+          showAvailabilityFeedback('info', 'Página pública removida da disponibilidade online.');
+        }
         setEditImageFile(null);
         setIsEditing(false);
       }
@@ -401,12 +444,32 @@ export const PetitionDetail: React.FC = () => {
     setEditImageFile(null);
     setImagePreview(undefined);
     setEditImageUrl(undefined);
+    setUploadError('');
   };
 
   const handleToggleOnlineAvailability = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!petition) return;
     
     const newAvailability = e.target.checked;
+
+    if (newAvailability) {
+      const canPublish = isPublicationReady({
+        name: petition.name,
+        slug: petition.slug,
+        description: petition.description,
+        imageUrl: petition.imageUrl,
+        isSlugUnique: true,
+      });
+
+      if (!canPublish) {
+        showAvailabilityFeedback(
+          'error',
+          'Complete título, descrição mínima e capa antes de liberar a página pública.'
+        );
+        setActiveTab('settings');
+        return;
+      }
+    }
     
     try {
       const updatedPetition = await updatePetition(petition.id, {
@@ -415,17 +478,16 @@ export const PetitionDetail: React.FC = () => {
 
       if (updatedPetition) {
         setPetition(updatedPetition);
-        
-        // Mostrar mensagem de sucesso
         if (newAvailability) {
-          alert(`✅ Abaixo-assinado disponibilizado online!\n\nLink público: ${window.location.origin}/petition/${petition.slug}`);
+          showAvailabilityFeedback('success', `Página pública ativada: ${getPublicPetitionUrl(petition.slug)}`);
         } else {
-          alert('✅ Abaixo-assinado removido da disponibilidade online.');
+          showAvailabilityFeedback('info', 'Página pública removida da disponibilidade online.');
         }
       }
     } catch (error) {
       console.error('Error toggling online availability:', error);
-      alert('❌ Erro ao alterar disponibilidade online. Tente novamente.');
+      showAvailabilityFeedback('error', 'Erro ao alterar disponibilidade online. Tente novamente.');
+      return;
     }
   };
 
@@ -753,6 +815,21 @@ export const PetitionDetail: React.FC = () => {
     return <div className="flex justify-center py-8 text-gray-900 dark:text-gray-100">Abaixo-assinado não encontrado</div>;
   }
 
+  const petitionPublicationChecklist = getPublicationChecklist({
+    name: petition.name,
+    slug: petition.slug,
+    description: petition.description,
+    imageUrl: petition.imageUrl,
+    isSlugUnique: true,
+  });
+  const petitionPublicationReady = isPublicationReady({
+    name: petition.name,
+    slug: petition.slug,
+    description: petition.description,
+    imageUrl: petition.imageUrl,
+    isSlugUnique: true,
+  });
+
   return (
     <div>
       <div className="mb-6">
@@ -811,8 +888,7 @@ export const PetitionDetail: React.FC = () => {
                     {petition.id}
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(petition.id);
-                        alert('ID copiado para a área de transferência!');
+                        void handleCopyToClipboard(petition.id, 'ID copiado para a área de transferência.');
                       }}
                       className="ml-1 p-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                       title="Copiar ID"
@@ -835,6 +911,20 @@ export const PetitionDetail: React.FC = () => {
           )}
         </div>
       </div>
+
+      {availabilityFeedback && (
+        <div
+          className={`mb-6 rounded-lg border p-3 text-sm ${
+            availabilityFeedback.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+              : availabilityFeedback.type === 'info'
+                ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                : 'border-red-200 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300'
+          }`}
+        >
+          {availabilityFeedback.message}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -1301,30 +1391,41 @@ export const PetitionDetail: React.FC = () => {
                   />
                 </div>
                 
-                {/* Upload de Imagem */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Imagem do Abaixo-Assinado (exibida na página pública)
+                    Capa da página pública
                   </label>
-                  <ImageUpload
-                    onImageUpload={handleImageUpload}
-                    onImageRemove={handleImageRemove}
-                    currentImage={imagePreview}
-                    maxSize={5}
-                    acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
-                  />
+                    <ImageUpload
+                      onImageUpload={handleImageUpload}
+                      onImageRemove={handleImageRemove}
+                      currentImage={imagePreview}
+                      maxSize={5}
+                      acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
+                      recommendedAspectRatio={16 / 9}
+                      recommendedAspectLabel="16:9"
+                      recommendedResolution="1200 x 675 px"
+                    />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Esta imagem será exibida na página pública de assinatura online
+                    {petition?.availableOnline
+                      ? 'Esta imagem será exibida na página pública de assinatura online.'
+                      : 'Você pode enviar a capa agora e ativar a página pública depois.'}
                   </p>
+                  {!petition?.availableOnline && (
+                    <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-900/20">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        A campanha ainda está offline, mas a capa já pode ser preparada para completar o checklist de publicação.
+                      </p>
+                    </div>
+                  )}
                   {uploadError && (
                     <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
                       <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                        ⚠️ {uploadError}
+                        {uploadError}
                       </p>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     type="submit"
@@ -1408,6 +1509,59 @@ export const PetitionDetail: React.FC = () => {
                 </div>
               </div>
 
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Checklist de publicação</h4>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                      A campanha só pode ficar online quando o mínimo público estiver completo.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      petitionPublicationReady
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                    }`}
+                  >
+                    {petitionPublicationReady ? 'Pronto para publicar' : 'Pendências de publicação'}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {petitionPublicationChecklist.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3">
+                      {item.complete ? (
+                        <CheckCircle size={16} className="mt-0.5 text-emerald-600 dark:text-emerald-300" />
+                      ) : (
+                        <XCircle size={16} className="mt-0.5 text-amber-600 dark:text-amber-300" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.label}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{item.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {!petition?.availableOnline && (
+                <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Prévia do link público
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    Quando o checklist estiver completo, esta será a URL usada para divulgação.
+                  </p>
+                  <input
+                    type="text"
+                    value={publicPetitionUrl}
+                    readOnly
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-slate-200 dark:border-slate-600 rounded text-sm text-gray-700 dark:text-gray-300"
+                  />
+                </div>
+              )}
+
               {petition?.availableOnline && (
                 <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
@@ -1419,14 +1573,13 @@ export const PetitionDetail: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      value={`${window.location.origin}/petition/${petition.slug}`}
+                      value={publicPetitionUrl}
                       readOnly
                       className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-blue-200 dark:border-blue-600 rounded text-sm text-gray-700 dark:text-gray-300"
                     />
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/petition/${petition.slug}`);
-                        alert('Link copiado para a área de transferência!');
+                        void handleCopyToClipboard(publicPetitionUrl, 'Link público copiado para a área de transferência.');
                       }}
                       className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
                     >

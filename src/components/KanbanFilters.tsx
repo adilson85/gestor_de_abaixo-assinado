@@ -1,6 +1,6 @@
 import React from 'react';
+import { Filter, Search, X } from 'lucide-react';
 import { KanbanColumn } from '../types';
-import { X, Search, Filter } from 'lucide-react';
 
 export interface KanbanFiltersType {
   searchTerm: string;
@@ -22,12 +22,12 @@ export const KanbanFilters: React.FC<KanbanFiltersProps> = ({
   filters,
   onFiltersChange,
   columns,
-  onClose
+  onClose,
 }) => {
   const handleFilterChange = (key: string, value: string) => {
     onFiltersChange({
       ...filters,
-      [key]: value
+      [key]: value,
     });
   };
 
@@ -38,67 +38,69 @@ export const KanbanFilters: React.FC<KanbanFiltersProps> = ({
       labelId: '',
       columnId: '',
       priority: '',
-      dueDateFilter: ''
+      dueDateFilter: '',
     });
   };
 
-  const hasActiveFilters = Object.values(filters).some(value => value && value !== '');
+  const hasActiveFilters = Object.values(filters).some((value) => value && value !== '');
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-gray-600 dark:text-gray-300" />
-          <h3 className="font-medium text-gray-900 dark:text-white">Filtros</h3>
+    <div className="mb-5 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-200">
+            <Filter size={18} />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Refine o quadro</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Filtre por coluna, prioridade, prazo ou responsáveis para focar no que precisa de ação.
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          {hasActiveFilters && (
+          {hasActiveFilters ? (
             <button
               onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500/30 dark:hover:text-blue-300"
             >
               Limpar filtros
             </button>
-          )}
+          ) : null}
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Search */}
+      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Buscar
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Buscar</label>
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={filters.searchTerm}
               onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
               placeholder="Buscar por título ou descrição..."
-              className="w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400"
             />
           </div>
         </div>
 
-        {/* Column Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Coluna
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Etapa</label>
           <select
             value={filters.columnId}
             onChange={(e) => handleFilterChange('columnId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
           >
             <option value="">Todas as colunas</option>
-            {columns.map(column => (
+            {columns.map((column) => (
               <option key={column.id} value={column.id}>
                 {column.name}
               </option>
@@ -106,15 +108,12 @@ export const KanbanFilters: React.FC<KanbanFiltersProps> = ({
           </select>
         </div>
 
-        {/* Priority Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Prioridade
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Prioridade</label>
           <select
             value={filters.priority}
             onChange={(e) => handleFilterChange('priority', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
           >
             <option value="">Todas as prioridades</option>
             <option value="high">Alta</option>
@@ -123,15 +122,12 @@ export const KanbanFilters: React.FC<KanbanFiltersProps> = ({
           </select>
         </div>
 
-        {/* Due Date Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Prazo
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Prazo</label>
           <select
             value={filters.dueDateFilter}
             onChange={(e) => handleFilterChange('dueDateFilter', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
           >
             <option value="">Todos os prazos</option>
             <option value="overdue">Vencidos</option>
@@ -141,35 +137,27 @@ export const KanbanFilters: React.FC<KanbanFiltersProps> = ({
           </select>
         </div>
 
-        {/* Assignee Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Responsável
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Responsável</label>
           <select
             value={filters.assigneeId}
             onChange={(e) => handleFilterChange('assigneeId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
           >
             <option value="">Todos os responsáveis</option>
-            {/* TODO: Load users from context or API */}
             <option value="me">Atribuído a mim</option>
             <option value="unassigned">Sem responsável</option>
           </select>
         </div>
 
-        {/* Label Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Etiqueta
-          </label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Etiqueta</label>
           <select
             value={filters.labelId}
             onChange={(e) => handleFilterChange('labelId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
           >
             <option value="">Todas as etiquetas</option>
-            {/* TODO: Load labels from board */}
           </select>
         </div>
       </div>

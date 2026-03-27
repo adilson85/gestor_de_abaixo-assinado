@@ -34,3 +34,12 @@ CONFIGURACOES_SUPABASE_PRIVADO.md
 # Test coverage
 coverage/
 *.lcov
+
+# Capturas locais
+home-page.png
+login-page.png
+login-page-20s.png
+login-page-stable.png
+petition-page.png
+petition-page-stable.png
+nul

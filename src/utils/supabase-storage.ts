@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Petition, Signature, PetitionResource } from '../types';
 import { generateSlug } from './validation';
+import { getDueDateForColumn } from './kanban-storage';
 
 // Petitions
 export const getPetitions = async (): Promise<Petition[]> => {
@@ -655,7 +656,6 @@ export const createKanbanTaskForPetition = async (petitionId: string, petitionNa
 
     // 5. Calcular data de vencimento baseada no prazo da coluna
     console.log('🔍 Calculando data de vencimento...');
-    const { getDueDateForColumn } = await import('./kanban-storage');
     const dueDate = await getDueDateForColumn(columnId);
     
     if (dueDate) {

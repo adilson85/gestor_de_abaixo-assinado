@@ -1,10 +1,10 @@
 {
-  "name": "Gestor de Abaixo-Assinados",
-  "short_name": "Abaixo-Assinados",
-  "description": "Sistema de digitalização e gestão de abaixo-assinados",
+  "name": "AssinaPovo Admin",
+  "short_name": "AssinaPovo",
+  "description": "Painel administrativo do AssinaPovo para gestao de campanhas e assinaturas",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0f172a",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "scope": "/",
@@ -40,7 +40,7 @@
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
-      "description": "Acessar o painel principal",
+      "description": "Acessar o painel principal do AssinaPovo",
       "url": "/dashboard",
       "icons": [
         {
@@ -50,9 +50,9 @@
       ]
     },
     {
-      "name": "Novo Abaixo-Assinado",
+      "name": "Nova campanha",
       "short_name": "Novo",
-      "description": "Cadastrar novo abaixo-assinado",
+      "description": "Criar uma nova campanha no AssinaPovo",
       "url": "/petitions/new",
       "icons": [
         {

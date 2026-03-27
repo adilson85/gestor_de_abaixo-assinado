@@ -18,7 +18,32 @@ export default defineConfig(({ mode }) => {
             return true;
           }
           return false;
-        }
+        },
+        output: {
+          manualChunks: (id) => {
+            if (!id.includes('node_modules')) {
+              return undefined;
+            }
+
+            if (id.includes('react') || id.includes('scheduler')) {
+              return 'react-vendor';
+            }
+
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+
+            if (id.includes('@dnd-kit')) {
+              return 'kanban-vendor';
+            }
+
+            if (id.includes('@googlemaps')) {
+              return 'maps-vendor';
+            }
+
+            return 'vendor';
+          },
+        },
       }
     }
   };

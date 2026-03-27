@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Search, ArchiveRestore, Trash2, Calendar } from 'lucide-react';
+import { ArchiveRestore, Calendar, Search, Trash2, X } from 'lucide-react';
 import { KanbanTask } from '../types';
-import { updateKanbanTask, deleteKanbanTask } from '../utils/kanban-storage';
+import { deleteKanbanTask, updateKanbanTask } from '../utils/kanban-storage';
 
 interface ArchivedTasksModalProps {
   isOpen: boolean;
@@ -16,25 +16,25 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
   onClose,
   archivedTasks,
   onTaskUnarchive,
-  onTaskDelete
+  onTaskDelete,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Filtrar tarefas por termo de busca
-  const filteredTasks = archivedTasks.filter(task =>
-    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredTasks = archivedTasks.filter(
+    (task) =>
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Agrupar tarefas por data de arquivamento
   const groupedTasks = filteredTasks.reduce((groups, task) => {
     const archiveDate = new Date(task.updatedAt);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - archiveDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     let groupKey: string;
+
     if (diffDays <= 7) {
       groupKey = 'Esta semana';
     } else if (diffDays <= 14) {
@@ -44,10 +44,11 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
     } else {
       groupKey = 'Há mais de 30 dias';
     }
-    
+
     if (!groups[groupKey]) {
       groups[groupKey] = [];
     }
+
     groups[groupKey].push(task);
     return groups;
   }, {} as Record<string, KanbanTask[]>);
@@ -65,6 +66,10 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
   };
 
   const handleDelete = async (taskId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa arquivada permanentemente?')) {
+      return;
+    }
+
     try {
       const success = await deleteKanbanTask(taskId);
       if (success) {
@@ -79,111 +84,101 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X size={20} />
-            </button>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between border-b border-slate-200 p-6 dark:border-slate-800">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
               Itens arquivados ({archivedTasks.length})
             </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Revise histórico, restaure entregas relevantes ou remova itens que não precisam mais ser mantidos.
+            </p>
           </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Search and Controls */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+        <div className="border-b border-slate-200 p-6 dark:border-slate-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
                 type="text"
-                placeholder="Pesquisar arquivo..."
+                placeholder="Pesquisar no arquivo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400"
               />
             </div>
             <button
               onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500/30 dark:hover:text-blue-300"
             >
-              {viewMode === 'grid' ? 'Alternar para listas' : 'Alternar para grade'}
+              {viewMode === 'grid' ? 'Ver em lista' : 'Ver em grade'}
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <div className="max-h-[calc(90vh-210px)] overflow-y-auto p-6">
           {Object.keys(groupedTasks).length === 0 ? (
-            <div className="text-center py-12">
-              <ArchiveRestore size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">
-                {searchTerm ? 'Nenhum item encontrado' : 'Nenhum item arquivado'}
+            <div className="py-12 text-center">
+              <ArchiveRestore size={48} className="mx-auto mb-4 text-slate-400" />
+              <p className="text-slate-500 dark:text-slate-400">
+                {searchTerm ? 'Nenhum item encontrado.' : 'Nenhum item arquivado.'}
               </p>
             </div>
           ) : (
             <div className="space-y-6">
               {Object.entries(groupedTasks).map(([groupName, tasks]) => (
                 <div key={groupName}>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-                    {groupName}
-                  </h3>
-                  <div className={viewMode === 'grid' 
-                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' 
-                    : 'space-y-2'
-                  }>
-                    {tasks.map(task => (
+                  <h3 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">{groupName}</h3>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3' : 'space-y-2'}>
+                    {tasks.map((task) => (
                       <div
                         key={task.id}
-                        className={`bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 cursor-pointer transition-all hover:shadow-md ${
-                          selectedTask?.id === task.id 
-                            ? 'ring-2 ring-blue-500 border-blue-500' 
-                            : 'hover:border-gray-300 dark:hover:border-gray-500'
+                        className={`cursor-pointer rounded-2xl border p-4 transition-all ${
+                          selectedTask?.id === task.id
+                            ? 'border-blue-500 ring-2 ring-blue-500/20 dark:border-blue-400'
+                            : 'border-slate-200 bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-slate-600'
                         }`}
                         onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                            <h4 className="font-medium text-gray-900 dark:text-white line-through">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950 line-through dark:text-white">
                               {task.title}
-                            </h4>
+                            </p>
+                            {task.description ? (
+                              <p className="mt-2 text-sm text-slate-500 line-through dark:text-slate-400">
+                                {task.description}
+                              </p>
+                            ) : null}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded">
-                              Arquivado
-                            </span>
-                          </div>
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                            Arquivado
+                          </span>
                         </div>
-                        
-                        {task.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300 line-through mb-3">
-                            {task.description}
-                          </p>
-                        )}
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                             <Calendar size={12} />
-                            <span>
-                              Arquivado em {new Date(task.updatedAt).toLocaleDateString('pt-BR')}
-                            </span>
+                            <span>Arquivado em {new Date(task.updatedAt).toLocaleDateString('pt-BR')}</span>
                           </div>
-                          
-                          {selectedTask?.id === task.id && (
+
+                          {selectedTask?.id === task.id ? (
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleUnarchive(task.id);
                                 }}
-                                className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                               >
                                 <ArchiveRestore size={14} />
                                 Restaurar
@@ -193,13 +188,13 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
                                   e.stopPropagation();
                                   handleDelete(task.id);
                                 }}
-                                className="flex items-center gap-1 px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-red-700"
                               >
                                 <Trash2 size={14} />
                                 Excluir
                               </button>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))}
@@ -213,4 +208,3 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
     </div>
   );
 };
-

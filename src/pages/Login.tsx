@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertCircle, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { BrandLogo } from '../components/BrandLogo';
 
 export const Login: React.FC = () => {
   const { signIn, user, loading, isAdmin } = useAuth();
@@ -15,7 +16,6 @@ export const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Redirecionar se já estiver logado E for admin
   useEffect(() => {
     if (user && !loading && isAdmin) {
       const next = searchParams.get('next') || '/dashboard';
@@ -29,23 +29,22 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     if (!email || !password) {
-      setError('Por favor, preencha todos os campos');
+      setError('Por favor, preencha todos os campos.');
       setIsLoading(false);
       return;
     }
 
-    const { error } = await signIn(email, password);
+    const { error: signInError } = await signIn(email, password);
 
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        setError('Email ou senha incorretos');
-      } else if (error.message.includes('Email not confirmed')) {
-        setError('Email não confirmado. Verifique sua caixa de entrada');
+    if (signInError) {
+      if (signInError.message.includes('Invalid login credentials')) {
+        setError('Email ou senha incorretos.');
+      } else if (signInError.message.includes('Email not confirmed')) {
+        setError('Email nao confirmado. Verifique sua caixa de entrada.');
       } else {
-        setError('Erro ao fazer login. Tente novamente');
+        setError('Erro ao fazer login. Tente novamente.');
       }
     } else {
-      // Login bem-sucedido, redirecionar
       const next = searchParams.get('next') || '/dashboard';
       navigate(next, { replace: true });
     }
@@ -55,50 +54,64 @@ export const Login: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-50 py-12 sm:px-6 lg:px-8 dark:bg-slate-950">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.14),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.22),_transparent_60%)]" />
+
       <button
         onClick={toggleTheme}
-        title="Alternar tema (claro/escuro)"
-        className="fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 shadow-lg border border-gray-200 hover:shadow-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
+        title="Alternar tema"
+        className="fixed right-4 top-4 z-10 inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500/40 dark:hover:text-blue-300"
       >
         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        <span className="text-sm font-medium">{theme === 'dark' ? 'Tema: Escuro' : 'Tema: Claro'}</span>
       </button>
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+
+      <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <img 
-            src={theme === 'dark' ? "/icone_abaixo-assinado.png" : "/icone_abaixo-assinado_branco.png"} 
-            alt="Ícone Abaixo-Assinado" 
-            className="w-20 h-20 object-contain"
-          />
+          <BrandLogo dark={theme === 'dark'} className="w-[240px] sm:w-[280px]" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
-          Sistema de Digitalização
+
+        <div className="mt-8 text-center">
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
+            Painel administrativo
+          </span>
+        </div>
+
+        <h2 className="mt-5 text-center text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+          Acesse o painel do AssinaPovo
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-300">
-          Faça login para acessar o sistema de gestão de abaixo-assinados
+        <p className="mt-3 text-center text-sm leading-6 text-slate-600 dark:text-slate-300">
+          Crie campanhas, acompanhe assinaturas e organize mobilizações com a mesma identidade do AssinaPovo público.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-lg sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/95 px-4 py-8 shadow-xl shadow-slate-200/60 backdrop-blur sm:px-10 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/20">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600" />
+
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Entrar no sistema</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Use suas credenciais administrativas para acessar campanhas, equipe e relatórios.
+            </p>
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg p-4 flex items-center gap-3">
-                <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0" />
-                <p className="text-red-600 dark:text-red-300 text-sm">{error}</p>
+            {error ? (
+              <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-700/60 dark:bg-red-900/20">
+                <AlertCircle size={20} className="shrink-0 text-red-600 dark:text-red-400" />
+                <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
               </div>
-            )}
+            ) : null}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Email
               </label>
               <div className="mt-1">
@@ -110,17 +123,17 @@ export const Login: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-300"
+                  className="block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:bg-slate-800"
                   placeholder="Digite seu email"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Senha
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="password"
                   name="password"
@@ -129,18 +142,18 @@ export const Login: React.FC = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-300"
+                  className="block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 pr-12 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:bg-slate-800"
                   placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 flex items-center pr-4"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff size={20} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white" />
+                    <EyeOff size={20} className="text-slate-400 transition hover:text-slate-600 dark:text-slate-400 dark:hover:text-white" />
                   ) : (
-                    <Eye size={20} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white" />
+                    <Eye size={20} className="text-slate-400 transition hover:text-slate-600 dark:text-slate-400 dark:hover:text-white" />
                   )}
                 </button>
               </div>
@@ -150,11 +163,11 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex w-full justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-slate-900"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
                     Entrando...
                   </div>
                 ) : (
@@ -170,17 +183,29 @@ export const Login: React.FC = () => {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Sistema Administrativo</span>
+                <span className="bg-white px-3 text-slate-500 dark:bg-slate-900 dark:text-slate-400">AssinaPovo Admin</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Acesso restrito a administradores autorizados
+          <div className="mt-6 space-y-3">
+            <div className="grid grid-cols-1 gap-3 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/80">
+                Campanhas organizadas
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/80">
+                Assinaturas integradas
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/80">
+                Relatórios e controle
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Uso restrito a administradores autorizados.
             </p>
           </div>
         </div>

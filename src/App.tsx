@@ -11,7 +11,7 @@ import { CreatePetition } from './pages/CreatePetition';
 import { PetitionDetail } from './pages/PetitionDetail';
 import { Tasks } from './pages/Tasks';
 import { Settings } from './pages/Settings';
-import { PublicPetition } from './pages/PublicPetition';
+import { PublicPetitionRedirect } from './pages/PublicPetitionRedirect';
 import { ErrorBoundary } from './utils/error-monitoring';
 
 function App() {
@@ -23,7 +23,7 @@ function App() {
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/petition/:slug" element={<PublicPetition />} />
+              <Route path="/petition/:slug" element={<PublicPetitionRedirect />} />
               
               {/* Protected application routes */}
               <Route path="/*" element={

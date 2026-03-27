@@ -1,22 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { KanbanColumn as KanbanColumnType, KanbanTask, KanbanBoard } from '../types';
+import React, { useEffect, useState } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragOverEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { Archive, ArchiveRestore, AlertTriangle, Columns3, ListTodo, Settings, SlidersHorizontal } from 'lucide-react';
+import { KanbanBoard, KanbanColumn as KanbanColumnType, KanbanTask } from '../types';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanFilters } from './KanbanFilters';
 import { KanbanTaskModal } from './KanbanTaskModal';
 import { ArchivedTasksModal } from './ArchivedTasksModal';
-import { 
-  getGlobalKanbanBoard, 
-  getKanbanColumns, 
-  getKanbanTasks, 
+import {
+  getGlobalKanbanBoard,
+  getKanbanColumns,
+  getKanbanTasks,
   moveKanbanTask,
   searchKanbanTasks,
-  updateKanbanTask
+  updateKanbanTask,
 } from '../utils/kanban-storage';
-import { Settings, Archive, ArchiveRestore } from 'lucide-react';
 
 interface KanbanBoardProps {
-  petitionId?: string; // Opcional para filtrar tarefas por abaixo-assinado
+  petitionId?: string;
 }
 
 export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
@@ -35,14 +44,13 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
     labelId: '',
     columnId: '',
     priority: '',
-    dueDateFilter: ''
+    dueDateFilter: '',
   });
 
-  // Sensor com distancia minima para evitar arrastar em cliques
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8
+        distance: 8,
       },
     })
   );
@@ -52,7 +60,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   }, []);
 
   useEffect(() => {
-    if (filters.searchTerm || Object.values(filters).some(f => f && f !== '')) {
+    if (filters.searchTerm || Object.values(filters).some((value) => value && value !== '')) {
       loadFilteredTasks();
     } else {
       loadTasks();
@@ -62,19 +70,17 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   const loadBoardData = async () => {
     try {
       setLoading(true);
-      
-      // Get global board
+
       const boardData = await getGlobalKanbanBoard();
-      
+
       if (boardData) {
         setBoard(boardData);
-        
-        // Load columns and tasks
+
         const [columnsData, tasksData] = await Promise.all([
           getKanbanColumns(boardData.id),
-          getKanbanTasks(boardData.id)
+          getKanbanTasks(boardData.id),
         ]);
-        
+
         setColumns(columnsData);
         setTasks(tasksData);
       }
@@ -87,12 +93,9 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
 
   const loadTasks = async () => {
     if (!board) return;
-    
+
     try {
-      console.log('🔄 Carregando tarefas para board:', board.id);
       const tasksData = await getKanbanTasks(board.id);
-      console.log('📝 Tarefas carregadas:', tasksData.length);
-      tasksData.forEach(task => console.log(`  - ${task.title} (Coluna: ${task.columnId})`));
       setTasks(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -101,11 +104,10 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
 
   const loadArchivedTasks = async () => {
     if (!board) return;
-    
+
     try {
       const archivedData = await getKanbanTasks(board.id, true);
-      const filteredArchived = archivedData.filter(task => task.isArchived);
-      setArchivedTasks(filteredArchived);
+      setArchivedTasks(archivedData.filter((task) => task.isArchived));
     } catch (error) {
       console.error('Error loading archived tasks:', error);
     }
@@ -113,14 +115,14 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
 
   const loadFilteredTasks = async () => {
     if (!board) return;
-    
+
     try {
       const filteredTasks = await searchKanbanTasks(board.id, filters.searchTerm, {
         assigneeId: filters.assigneeId || undefined,
         labelId: filters.labelId || undefined,
         columnId: filters.columnId || undefined,
         priority: filters.priority || undefined,
-        dueDateFilter: (filters.dueDateFilter as 'overdue' | 'today' | 'week' | 'month') || undefined
+        dueDateFilter: (filters.dueDateFilter as 'overdue' | 'today' | 'week' | 'month') || undefined,
       });
       setTasks(filteredTasks);
     } catch (error) {
@@ -129,25 +131,17 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    console.log('🚀 Drag started:', active.id);
-    const task = tasks.find(t => t.id === active.id);
-    if (task) {
-      console.log('📝 Task found:', task.title);
-      setActiveTask(task);
-    } else {
-      console.log('❌ Task not found for ID:', active.id);
-      setActiveTask(null);
-    }
+    const task = tasks.find((item) => item.id === event.active.id);
+    setActiveTask(task || null);
   };
 
-  const handleDragOver = () => {
-    // Handle drag over logic if needed
+  const handleDragOver = (_event: DragOverEvent) => {
+    return;
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!active || !over) {
       setActiveTask(null);
       return;
@@ -155,64 +149,60 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
 
     const taskId = active.id as string;
     const overId = over.id as string;
-    
-    // Snapshot para rollback confiável ANTES de qualquer mudança
     const snapshotTasks = [...tasks];
-    
-    // Find the task being dragged
-    const draggedTask = tasks.find(t => t.id === taskId);
+    const draggedTask = tasks.find((task) => task.id === taskId);
+
     if (!draggedTask) {
       setActiveTask(null);
       return;
     }
 
-    // Find the target column and position
     let targetColumnId: string;
-    let newPosition: number = 0;
-    
-    // Check if dropping on a column
-    const targetColumn = columns.find(c => c.id === overId);
+    let newPosition = 0;
+
+    const targetColumn = columns.find((column) => column.id === overId);
+
     if (targetColumn) {
       targetColumnId = targetColumn.id;
-      // Calculate position at end of column
-      const columnTasks = tasks.filter(t => t.columnId === targetColumnId && t.id !== taskId);
+      const columnTasks = tasks.filter((task) => task.columnId === targetColumnId && task.id !== taskId);
       newPosition = columnTasks.length;
     } else {
-      // Check if dropping on another task
-      const targetTask = tasks.find(t => t.id === overId);
-      if (targetTask) {
-        targetColumnId = targetTask.columnId;
-        // Calculate position before/after target task
-        const columnTasks = tasks
-          .filter(t => t.columnId === targetColumnId && t.id !== taskId)
-          .sort((a, b) => a.position - b.position);
-        const targetIndex = columnTasks.findIndex(t => t.id === targetTask.id);
-        newPosition = targetIndex >= 0 ? targetIndex : columnTasks.length;
-      } else {
+      const targetTask = tasks.find((task) => task.id === overId);
+
+      if (!targetTask) {
         setActiveTask(null);
         return;
       }
+
+      targetColumnId = targetTask.columnId;
+      const columnTasks = tasks
+        .filter((task) => task.columnId === targetColumnId && task.id !== taskId)
+        .sort((a, b) => a.position - b.position);
+      const targetIndex = columnTasks.findIndex((task) => task.id === targetTask.id);
+      newPosition = targetIndex >= 0 ? targetIndex : columnTasks.length;
     }
 
-    // Update task position optimistically
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (task.id === taskId) {
         return { ...task, columnId: targetColumnId, position: newPosition };
       }
-      // Reordenar outras tarefas na coluna de destino
+
       if (task.columnId === targetColumnId && task.id !== taskId) {
-        return { ...task, position: task.position >= newPosition ? task.position + 1 : task.position };
+        return {
+          ...task,
+          position: task.position >= newPosition ? task.position + 1 : task.position,
+        };
       }
+
       return task;
     });
+
     setTasks(updatedTasks);
 
-    // Update in database
     try {
       await moveKanbanTask(taskId, targetColumnId, newPosition);
     } catch (error) {
       console.error('Error moving task:', error);
-      // Rollback confiável usando snapshot
       setTasks(snapshotTasks);
       setActiveTask(null);
     }
@@ -225,9 +215,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   };
 
   const handleTaskUpdate = (updatedTask: KanbanTask) => {
-    setTasks(tasks.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
-    ));
+    setTasks(tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
     setSelectedTask(null);
   };
 
@@ -235,7 +223,6 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
     try {
       const success = await updateKanbanTask(taskId, { isArchived: false });
       if (success) {
-        // Recarregar tarefas normais e arquivadas
         await loadTasks();
         await loadArchivedTasks();
       }
@@ -249,127 +236,186 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
   };
 
   const handleTaskDelete = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
+    setTasks(tasks.filter((task) => task.id !== taskId));
     setSelectedTask(null);
   };
 
-  const getTasksForColumn = (columnId: string) => {
-    return tasks
-      .filter(task => task.columnId === columnId)
+  const getTasksForColumn = (columnId: string) =>
+    tasks
+      .filter((task) => task.columnId === columnId)
       .sort((a, b) => a.position - b.position);
-  };
+
+  const now = new Date();
+  const activeFilterCount = Object.values(filters).filter((value) => value && value !== '').length;
+  const highPriorityCount = tasks.filter((task) => task.priority === 'high').length;
+  const overdueCount = tasks.filter((task) => task.dueDate && task.dueDate.getTime() < now.getTime()).length;
+  const visibleTaskCount = tasks.length;
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
       </div>
     );
   }
 
   if (!board) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 dark:text-gray-400">Erro ao carregar o quadro Kanban</p>
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900/40 dark:bg-red-950/20">
+        <p className="text-sm font-semibold text-red-700 dark:text-red-300">Erro ao carregar o quadro Kanban.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {board.name}
-          </h2>
+    <div className="flex h-full flex-col">
+      <div className="mb-6 overflow-hidden rounded-[28px] border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-slate-50 p-6 shadow-sm dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white dark:shadow-xl dark:shadow-slate-950/20">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <span className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-blue-700 dark:border-white/10 dark:bg-white/10 dark:text-blue-100">
+              Quadro de execução
+            </span>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">{board.name}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Organize entregas, acompanhe prazos e mantenha cada campanha avançando com visibilidade para toda a equipe.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:hover:text-white"
+            >
+              <SlidersHorizontal size={16} />
+              {showFilters ? 'Ocultar filtros' : 'Abrir filtros'}
+            </button>
+            <button
+              onClick={() => {
+                setShowArchived(!showArchived);
+                if (!showArchived) {
+                  loadArchivedTasks();
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:hover:text-white"
+            >
+              {showArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              {showArchived ? 'Ocultar arquivados' : 'Ver arquivados'}
+            </button>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-          >
-            <Settings size={16} />
-            Filtros
-          </button>
-          <button
-            onClick={() => {
-              setShowArchived(!showArchived);
-              if (!showArchived) {
-                loadArchivedTasks();
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-          >
-            {showArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-            {showArchived ? 'Ocultar Arquivados' : 'Ver Arquivados'}
-          </button>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-100">
+              <ListTodo size={16} />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Tarefas visíveis</p>
+            </div>
+            <p className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">{visibleTaskCount}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-100">
+              <Columns3 size={16} />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Etapas do quadro</p>
+            </div>
+            <p className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">{columns.length}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-200">
+              <AlertTriangle size={16} />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Alta prioridade</p>
+            </div>
+            <p className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">{highPriorityCount}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+            <div className="flex items-center gap-2 text-violet-700 dark:text-violet-200">
+              <Settings size={16} />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Filtros ativos</p>
+            </div>
+            <p className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">{activeFilterCount}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+              {overdueCount} tarefa{overdueCount === 1 ? '' : 's'} vencida{overdueCount === 1 ? '' : 's'}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      {showFilters && (
+      {showFilters ? (
         <KanbanFilters
           filters={filters}
           onFiltersChange={setFilters}
           columns={columns}
           onClose={() => setShowFilters(false)}
         />
-      )}
+      ) : null}
 
-
-      {/* Board */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex gap-4 min-w-max pb-4 h-full items-start">
-            {columns.map(column => (
-              <div key={column.id} className="flex-shrink-0 w-80 h-full">
-                <KanbanColumn
-                  column={column}
-                  tasks={getTasksForColumn(column.id)}
-                  onTaskClick={handleTaskClick}
-                  onTaskCreate={handleTaskCreate}
-                />
-              </div>
-            ))}
-          </div>
-
-          <DragOverlay>
-            {activeTask ? (
-              <div className="opacity-50 cursor-grabbing">
-                {/* Preview inerte sem useSortable - apenas visual */}
-                <div className="bg-white dark:bg-gray-700 rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-600 transform rotate-2 scale-105">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    {activeTask.title}
-                  </h4>
-                  {activeTask.description && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
-                      {activeTask.description}
-                    </p>
-                  )}
-                  {/* Mostrar indicadores visuais básicos */}
-                  {activeTask.priority && (
-                    <div className="flex items-center gap-1 mt-2">
-                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                        {activeTask.priority === 'high' ? 'Alta' : activeTask.priority === 'medium' ? 'Média' : 'Baixa'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+          Arraste tarefas entre colunas para atualizar a etapa.
+        </span>
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+          Clique em uma tarefa para abrir os detalhes completos.
+        </span>
       </div>
 
-      {/* Task Modal */}
-      {selectedTask && (
+      <div className="flex-1 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-950 dark:text-white">Quadro em andamento</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Visualize as tarefas por etapa e mova cada item conforme a execução avançar.
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex h-full min-w-max items-start gap-4 pb-4">
+              {columns.map((column) => (
+                <div key={column.id} className="h-full w-80 flex-shrink-0">
+                  <KanbanColumn
+                    column={column}
+                    tasks={getTasksForColumn(column.id)}
+                    onTaskClick={handleTaskClick}
+                    onTaskCreate={handleTaskCreate}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeTask ? (
+                <div className="cursor-grabbing opacity-50">
+                  <div className="rotate-2 scale-105 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-700">
+                    <h4 className="mb-2 text-sm font-medium text-gray-900 dark:text-white">{activeTask.title}</h4>
+                    {activeTask.description ? (
+                      <p className="line-clamp-2 text-xs text-gray-600 dark:text-gray-300">{activeTask.description}</p>
+                    ) : null}
+                    {activeTask.priority ? (
+                      <div className="mt-2 flex items-center gap-1">
+                        <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                          {activeTask.priority === 'high'
+                            ? 'Alta'
+                            : activeTask.priority === 'medium'
+                              ? 'Média'
+                              : 'Baixa'}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      </div>
+
+      {selectedTask ? (
         <KanbanTaskModal
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
@@ -377,9 +423,8 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
           onDelete={handleTaskDelete}
           boardId={board.id}
         />
-      )}
+      ) : null}
 
-      {/* Archived Tasks Modal */}
       <ArchivedTasksModal
         isOpen={showArchived}
         onClose={() => setShowArchived(false)}
