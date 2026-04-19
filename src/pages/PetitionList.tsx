@@ -25,6 +25,14 @@ type StatusFilter = 'all' | 'public' | 'internal';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
 
+const isFeaturedByGoal = (petition: Petition, supportCount: number) => {
+  if (petition.signatureGoal && petition.signatureGoal > 0) {
+    return supportCount >= petition.signatureGoal;
+  }
+
+  return supportCount >= 500;
+};
+
 const formatDate = (date: Date) =>
   new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -425,7 +433,7 @@ export const PetitionList: React.FC = () => {
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${availability.className}`}>
                           {availability.label}
                         </span>
-                        {supportCount >= 500 ? (
+                        {isFeaturedByGoal(petition, supportCount) ? (
                           <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                             Em destaque
                           </span>

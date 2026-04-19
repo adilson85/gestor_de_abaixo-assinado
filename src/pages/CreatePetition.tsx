@@ -18,6 +18,7 @@ export const CreatePetition: React.FC = () => {
   const [location, setLocation] = useState('');
   const [collectionDate, setCollectionDate] = useState('');
   const [responsible, setResponsible] = useState('');
+  const [signatureGoal, setSignatureGoal] = useState('');
   const [availableOnline, setAvailableOnline] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -58,12 +59,15 @@ export const CreatePetition: React.FC = () => {
   };
 
   const normalizedSlug = slug.trim().toLowerCase();
+  const signatureGoalValue = signatureGoal.trim() ? Number(signatureGoal) : undefined;
+  const hasValidSignatureGoal = Number.isInteger(signatureGoalValue) && signatureGoalValue >= 1;
   const slugError = validatePetitionSlug(normalizedSlug);
   const slugTaken = normalizedSlug ? existingSlugs.includes(normalizedSlug) : false;
   const publicationChecklist = getPublicationChecklist({
     name,
     slug: normalizedSlug,
     description,
+    signatureGoal: hasValidSignatureGoal ? signatureGoalValue : undefined,
     imageUrl: imagePreview,
     isSlugUnique: !slugTaken,
   });
@@ -71,6 +75,7 @@ export const CreatePetition: React.FC = () => {
     name,
     slug: normalizedSlug,
     description,
+    signatureGoal: hasValidSignatureGoal ? signatureGoalValue : undefined,
     imageUrl: imagePreview,
     isSlugUnique: !slugTaken,
   });
@@ -84,6 +89,12 @@ export const CreatePetition: React.FC = () => {
 
     const nameError = validateName(name);
     if (nameError) newErrors.name = nameError;
+
+    if (availableOnline && !signatureGoal.trim()) {
+      newErrors.signatureGoal = 'Defina uma meta de assinaturas para publicar a campanha online.';
+    } else if (signatureGoal.trim() && !hasValidSignatureGoal) {
+      newErrors.signatureGoal = 'A meta deve ser um número inteiro maior ou igual a 1.';
+    }
 
     const latestSlugs =
       existingSlugs.length > 0
@@ -133,6 +144,7 @@ export const CreatePetition: React.FC = () => {
         location: location.trim() || undefined,
         collectionDate: collectionDate ? new Date(collectionDate) : undefined,
         responsible: responsible.trim() || undefined,
+        signatureGoal: signatureGoalValue,
         imageUrl,
         availableOnline,
       });
@@ -275,6 +287,42 @@ export const CreatePetition: React.FC = () => {
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30">
+              <div className="mb-4">
+                <label htmlFor="signatureGoal" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {availableOnline ? 'Meta de assinaturas *' : 'Meta de assinaturas (opcional)'}
+                </label>
+                <input
+                  type="number"
+                  id="signatureGoal"
+                  min={1}
+                  step={1}
+                  required={availableOnline}
+                  value={signatureGoal}
+                  onChange={(e) => {
+                    setSignatureGoal(e.target.value);
+                    if (errors.signatureGoal) {
+                      setErrors((prev) => ({ ...prev, signatureGoal: '' }));
+                    }
+                    if (errors.general) {
+                      setErrors((prev) => ({ ...prev, general: '' }));
+                    }
+                  }}
+                  className={`w-full rounded-lg border bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-300 ${
+                    errors.signatureGoal ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="Ex.: 500"
+                />
+                {errors.signatureGoal ? (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">{errors.signatureGoal}</p>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {availableOnline
+                      ? 'Obrigatória para publicar a campanha online.'
+                      : 'Defina o número de assinaturas alvo para a campanha.'}
+                  </p>
+                )}
+              </div>
+
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -284,7 +332,7 @@ export const CreatePetition: React.FC = () => {
                     setAvailableOnline(e.target.checked);
                     if (!e.target.checked) {
                       setUploadError('');
-                      setErrors((prev) => ({ ...prev, imageUrl: '', slug: '', general: '' }));
+                      setErrors((prev) => ({ ...prev, imageUrl: '', slug: '', signatureGoal: '', general: '' }));
                     }
                   }}
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -294,7 +342,7 @@ export const CreatePetition: React.FC = () => {
                     Disponibilizar para Assinatura Online
                   </label>
                   <p className="mt-1 text-sm text-blue-700 dark:text-blue-200">
-                    Ative quando a campanha estiver pronta para divulgação pública com link próprio, capa e contexto mínimo.
+                    Ative quando a campanha estiver pronta para divulgação pública com link próprio, meta, capa e contexto mínimo.
                   </p>
                 </div>
               </div>
@@ -423,7 +471,11 @@ export const CreatePetition: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    <div className={`mt-4 rounded-xl px-3 py-2 text-sm font-medium ${publicationReady ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'}`}>
+                    <div className={`mt-4 rounded-xl px-3 py-2 text-sm font-medium ${
+                      publicationReady
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
+                    }`}>
                       {publicationReady
                         ? 'Pronto para publicar online.'
                         : 'Complete o checklist para liberar a divulgação pública.'}

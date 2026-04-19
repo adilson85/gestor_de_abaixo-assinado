@@ -28,6 +28,7 @@ export const getPetitions = async (): Promise<Petition[]> => {
     tableName: petition.table_name,
     createdAt: new Date(petition.created_at),
     updatedAt: new Date(petition.updated_at),
+    signatureGoal: petition.signature_goal ?? undefined,
   }));
 };
 
@@ -56,6 +57,7 @@ export const getPetitionById = async (id: string): Promise<Petition | null> => {
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
+    signatureGoal: data.signature_goal ?? undefined,
   };
 };
 
@@ -84,6 +86,7 @@ export const getPetitionBySlug = async (slug: string): Promise<Petition | null> 
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
+    signatureGoal: data.signature_goal ?? undefined,
   };
 };
 
@@ -99,6 +102,7 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
     collection_date: petition.collectionDate ? petition.collectionDate.toISOString().split('T')[0] : null,
     responsible: petition.responsible || null,
     image_url: petition.imageUrl || null,
+    signature_goal: petition.signatureGoal ?? null,
     available_online: petition.availableOnline || false,
     table_name: tableName,
   };
@@ -142,6 +146,7 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
     collectionDate: data.collection_date ? new Date(data.collection_date) : undefined,
     responsible: data.responsible || undefined,
     imageUrl: data.image_url || undefined,
+    signatureGoal: data.signature_goal ?? undefined,
     availableOnline: data.available_online || false,
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
@@ -150,7 +155,7 @@ export const savePetition = async (petition: Omit<Petition, 'id' | 'createdAt' |
 };
 
 export const updatePetition = async (id: string, updates: Partial<Petition>): Promise<Petition | null> => {
-  const updateData = {
+  const updateData: Record<string, unknown> = {
     name: updates.name,
     description: updates.description || null,
     location: updates.location || null,
@@ -160,6 +165,10 @@ export const updatePetition = async (id: string, updates: Partial<Petition>): Pr
     available_online: updates.availableOnline,
     updated_at: new Date().toISOString(),
   };
+
+  if ('signatureGoal' in updates) {
+    updateData.signature_goal = updates.signatureGoal ?? null;
+  }
 
   const { data, error } = await supabase
     .from('petitions')
@@ -183,6 +192,7 @@ export const updatePetition = async (id: string, updates: Partial<Petition>): Pr
     responsible: data.responsible || undefined,
     imageUrl: data.image_url || undefined,
     availableOnline: data.available_online || false,
+    signatureGoal: data.signature_goal ?? undefined,
     tableName: data.table_name,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),

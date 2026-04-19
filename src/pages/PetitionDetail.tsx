@@ -49,6 +49,8 @@ import { uploadImage, deleteImage } from '../utils/image-storage';
 import { getPublicPetitionUrl } from '../utils/public-url';
 import { getPublicationChecklist, isPublicationReady } from '../utils/publication-readiness';
 
+const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+
 export const PetitionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -103,6 +105,8 @@ export const PetitionDetail: React.FC = () => {
   const [editLocation, setEditLocation] = useState('');
   const [editCollectionDate, setEditCollectionDate] = useState('');
   const [editResponsible, setEditResponsible] = useState('');
+  const [editSignatureGoal, setEditSignatureGoal] = useState('');
+  const [editSignatureGoalError, setEditSignatureGoalError] = useState('');
   const [editImageUrl, setEditImageUrl] = useState<string | undefined>('');
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | undefined>('');
@@ -124,7 +128,7 @@ export const PetitionDetail: React.FC = () => {
       showAvailabilityFeedback('success', successMessage);
     } catch (error) {
       console.error('Error copying text to clipboard:', error);
-      showAvailabilityFeedback('error', 'NÃ£o foi possÃ­vel copiar agora. Tente novamente.');
+      showAvailabilityFeedback('error', 'Não foi possível copiar agora. Tente novamente.');
     }
   };
 
@@ -146,6 +150,8 @@ export const PetitionDetail: React.FC = () => {
         setEditLocation(currentPetition.location || '');
         setEditCollectionDate(currentPetition.collectionDate ? currentPetition.collectionDate.toISOString().split('T')[0] : '');
         setEditResponsible(currentPetition.responsible || '');
+        setEditSignatureGoal(currentPetition.signatureGoal ? String(currentPetition.signatureGoal) : '');
+        setEditSignatureGoalError('');
         setEditImageUrl(currentPetition.imageUrl);
         setImagePreview(currentPetition.imageUrl);
         
@@ -347,8 +353,21 @@ export const PetitionDetail: React.FC = () => {
     const errors: { [key: string]: string } = {};
     const nameError = validateName(editName);
     if (nameError) errors.name = nameError;
+    const signatureGoalValue = editSignatureGoal.trim() ? Number(editSignatureGoal) : undefined;
+    if (petition.availableOnline && !editSignatureGoal.trim()) {
+      errors.signatureGoal = 'Defina uma meta de assinaturas para manter a campanha online.';
+    } else if (editSignatureGoal.trim() && (!Number.isInteger(signatureGoalValue) || signatureGoalValue < 1)) {
+      errors.signatureGoal = 'A meta de assinaturas deve ser um número inteiro maior ou igual a 1.';
+    }
 
     if (Object.keys(errors).length > 0) {
+      if (errors.name) {
+        showAvailabilityFeedback('error', errors.name);
+      } else if (errors.signatureGoal) {
+        showAvailabilityFeedback('error', errors.signatureGoal);
+      }
+
+      setEditSignatureGoalError(errors.signatureGoal || '');
       return;
     }
 
@@ -357,6 +376,7 @@ export const PetitionDetail: React.FC = () => {
       name: editName,
       slug: petition.slug,
       description: editDescription,
+      signatureGoal: signatureGoalValue,
       imageUrl: nextImageCandidate,
       isSlugUnique: true,
     });
@@ -364,7 +384,7 @@ export const PetitionDetail: React.FC = () => {
     if (petition.availableOnline && !nextPublicationReady) {
       showAvailabilityFeedback(
         'error',
-        'A página pública está ativa. Complete o checklist mínimo antes de salvar as alterações.'
+        'A página pública está ativa. Complete o checklist mínimo, incluindo a meta, antes de salvar as alterações.'
       );
       return;
     }
@@ -407,16 +427,14 @@ export const PetitionDetail: React.FC = () => {
         collectionDate: editCollectionDate ? new Date(editCollectionDate) : undefined,
         responsible: editResponsible.trim() || undefined,
         imageUrl: newImageUrl,
+        signatureGoal: signatureGoalValue,
       };
 
       const updatedPetition = await updatePetition(petition.id, updates);
       if (updatedPetition) {
         setPetition(updatedPetition);
-        if (newAvailability) {
-          showAvailabilityFeedback('success', `Página pública ativada: ${getPublicPetitionUrl(petition.slug)}`);
-        } else {
-          showAvailabilityFeedback('info', 'Página pública removida da disponibilidade online.');
-        }
+        showAvailabilityFeedback('success', 'Dados da campanha atualizados com sucesso.');
+        setEditSignatureGoalError('');
         setEditImageFile(null);
         setIsEditing(false);
       }
@@ -457,6 +475,7 @@ export const PetitionDetail: React.FC = () => {
         name: petition.name,
         slug: petition.slug,
         description: petition.description,
+        signatureGoal: petition.signatureGoal,
         imageUrl: petition.imageUrl,
         isSlugUnique: true,
       });
@@ -464,7 +483,7 @@ export const PetitionDetail: React.FC = () => {
       if (!canPublish) {
         showAvailabilityFeedback(
           'error',
-          'Complete título, descrição mínima e capa antes de liberar a página pública.'
+          'Complete título, descrição mínima, meta e capa antes de liberar a página pública.'
         );
         setActiveTab('settings');
         return;
@@ -819,6 +838,7 @@ export const PetitionDetail: React.FC = () => {
     name: petition.name,
     slug: petition.slug,
     description: petition.description,
+    signatureGoal: petition.signatureGoal,
     imageUrl: petition.imageUrl,
     isSlugUnique: true,
   });
@@ -826,6 +846,7 @@ export const PetitionDetail: React.FC = () => {
     name: petition.name,
     slug: petition.slug,
     description: petition.description,
+    signatureGoal: petition.signatureGoal,
     imageUrl: petition.imageUrl,
     isSlugUnique: true,
   });
@@ -1390,6 +1411,38 @@ export const PetitionDetail: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {petition?.availableOnline ? 'Meta de assinaturas *' : 'Meta de assinaturas (opcional)'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    required={petition?.availableOnline}
+                    value={editSignatureGoal}
+                    onChange={(e) => {
+                      setEditSignatureGoal(e.target.value);
+                      if (editSignatureGoalError) {
+                        setEditSignatureGoalError('');
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                      editSignatureGoalError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    placeholder="Ex.: 500"
+                  />
+                  {editSignatureGoalError ? (
+                    <p className="text-red-600 text-sm mt-1 dark:text-red-400">{editSignatureGoalError}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
+                      {petition?.availableOnline
+                        ? 'Obrigatória para manter a campanha online.'
+                        : 'Defina o total de assinaturas esperado.'}
+                    </p>
+                  )}
+                </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1480,6 +1533,12 @@ export const PetitionDetail: React.FC = () => {
                     <p className="text-gray-900 dark:text-gray-100">{petition.responsible}</p>
                   </div>
                 )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Meta de assinaturas</label>
+                  <p className="text-gray-900 dark:text-gray-100">
+                    {petition.signatureGoal ? formatNumber(petition.signatureGoal) : '—'}
+                  </p>
+                </div>
               </div>
             )}
           </div>

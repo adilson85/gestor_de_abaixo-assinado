@@ -5,10 +5,17 @@ import { Petition, Signature } from '../types';
 import { getPetitionBySlug, saveSignature, getSignaturesByPetition, checkPhoneDuplicate } from '../utils/supabase-storage';
 import { validatePhone, normalizePhone } from '../utils/validation';
 
+const formatSignatureNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+const getSignatureCounterText = (petition: Petition | null, signatureCount: number) =>
+  petition?.signatureGoal
+    ? `${formatSignatureNumber(signatureCount)} / ${formatSignatureNumber(petition.signatureGoal)}`
+    : formatSignatureNumber(signatureCount);
+
 // Componente para atualizar meta tags dinamicamente
 const updateMetaTags = (petition: Petition, signatureCount: number) => {
   const title = `${petition.name} - Abaixo-Assinado`;
-  const description = petition.description || `Assine este abaixo-assinado e ajude a fazer a diferença. Já são ${signatureCount} assinaturas!`;
+  const signatureText = getSignatureCounterText(petition, signatureCount);
+  const description = petition.description || `Assine este abaixo-assinado e ajude a fazer a diferença. Já são ${signatureText} assinaturas!`;
   const url = window.location.href;
   const image = petition.imageUrl || `${window.location.origin}/icon-512x512.png`;
 
@@ -47,12 +54,12 @@ const updateMetaTags = (petition: Petition, signatureCount: number) => {
 };
 
 // Componente de botões de compartilhamento
-const ShareButtons: React.FC<{ petition: Petition; signatureCount: number }> = ({ petition, signatureCount }) => {
+const ShareButtons: React.FC<{ petition: Petition; signatureDisplay: string }> = ({ petition, signatureDisplay }) => {
   const [copied, setCopied] = useState(false);
   const [showShare, setShowShare] = useState(false);
   
   const shareUrl = window.location.href;
-  const shareText = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatureCount} assinaturas! Sua participação faz a diferença.`;
+  const shareText = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatureDisplay} assinaturas! Sua participação faz a diferença.`;
   
   const handleCopyLink = async () => {
     try {
@@ -228,6 +235,7 @@ export const PublicPetition: React.FC = () => {
     message: string;
     isChecking: boolean;
   }>({ isValid: null, message: '', isChecking: false });
+  const signatureDisplay = getSignatureCounterText(petition, signatures.length);
   const [nameValidation, setNameValidation] = useState<{
     isValid: boolean | null;
     message: string;
@@ -625,7 +633,7 @@ export const PublicPetition: React.FC = () => {
 
   if (submitted) {
     const shareUrl = window.location.href;
-    const shareText = `Assine o abaixo-assinado: ${petition?.name}. Já são ${signatures.length} assinaturas! Sua participação faz a diferença.`;
+    const shareText = `Assine o abaixo-assinado: ${petition?.name}. Já são ${signatureDisplay} assinaturas! Sua participação faz a diferença.`;
     
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -637,7 +645,7 @@ export const PublicPetition: React.FC = () => {
           </p>
           <div className="bg-blue-50 p-4 rounded-lg mb-6">
             <p className="text-sm text-blue-800">
-              <strong>{signatures.length}</strong> pessoas já assinaram este abaixo-assinado
+              <strong>{signatureDisplay}</strong> pessoas já assinaram este abaixo-assinado
             </p>
           </div>
           
@@ -772,7 +780,7 @@ export const PublicPetition: React.FC = () => {
             {/* Botão de compartilhar abaixo da descrição */}
             {petition && (
               <div className="flex justify-center mb-6 sm:mb-8">
-                <ShareButtons petition={petition} signatureCount={signatures.length} />
+                <ShareButtons petition={petition} signatureDisplay={signatureDisplay} />
               </div>
             )}
 
@@ -793,7 +801,7 @@ export const PublicPetition: React.FC = () => {
                     <Users size={28} className="text-white" />
                   </div>
                   <div className="text-left">
-                    <div className="text-3xl sm:text-4xl font-bold">{signatures.length}</div>
+                    <div className="text-3xl sm:text-4xl font-bold">{signatureDisplay}</div>
                     <div className="text-sm sm:text-base font-medium text-blue-100">assinaturas</div>
                   </div>
                 </div>
@@ -1134,7 +1142,7 @@ export const PublicPetition: React.FC = () => {
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => {
-                      const text = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatures.length} assinaturas!`;
+                      const text = `Assine o abaixo-assinado: ${petition.name}. Já são ${signatureDisplay} assinaturas!`;
                       const url = `https://wa.me/?text=${encodeURIComponent(`${text}\n\n${window.location.href}`)}`;
                       window.open(url, '_blank');
                     }}
