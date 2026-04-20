@@ -200,20 +200,6 @@ export const updatePetition = async (id: string, updates: Partial<Petition>): Pr
 };
 
 export const deletePetition = async (id: string): Promise<boolean> => {
-  // Primeiro, buscar o nome da tabela
-  const petition = await getPetitionById(id);
-  if (!petition) return false;
-
-  // Deletar a tabela de assinaturas
-  const { error: dropError } = await supabase.rpc('exec', {
-    sql: `DROP TABLE IF EXISTS ${petition.tableName}`
-  });
-
-  if (dropError) {
-    console.error('Error dropping signatures table:', dropError);
-  }
-
-  // Deletar a petition
   const { error } = await supabase
     .from('petitions')
     .delete()
@@ -420,6 +406,41 @@ export const updateSignatureMessageStatus = async (petitionId: string, signature
   return true;
 };
 
+export const updateMultipleSignatureMessageStatus = async (
+  petitionId: string,
+  signatureIds: string[],
+  mensagemEnviada: boolean
+): Promise<number> => {
+  const uniqueSignatureIds = [...new Set(signatureIds.filter(Boolean))];
+
+  if (uniqueSignatureIds.length === 0) {
+    return 0;
+  }
+
+  const chunkSize = 200;
+  let updatedCount = 0;
+
+  for (let index = 0; index < uniqueSignatureIds.length; index += chunkSize) {
+    const chunk = uniqueSignatureIds.slice(index, index + chunkSize);
+
+    const { data, error } = await supabase
+      .from('signatures')
+      .update({ mensagem_enviada: mensagemEnviada })
+      .eq('petition_id', petitionId)
+      .in('id', chunk)
+      .select('id');
+
+    if (error) {
+      console.error('Error updating multiple signature message statuses:', error);
+      throw error;
+    }
+
+    updatedCount += data?.length || 0;
+  }
+
+  return updatedCount;
+};
+
 export const updateSignature = async (
   signatureId: string,
   updates: Partial<Pick<Signature, 'name' | 'phone' | 'street' | 'neighborhood' | 'city' | 'state' | 'zipCode' | 'mensagemEnviada'>>
@@ -518,7 +539,7 @@ export const addPetitionResource = async (petitionId: string, resource: Omit<Pet
     }
     // Se for erro de RLS
     if (error.code === '42501') {
-      throw new Error('Você não tem permissão para adicionar links. Verifique se está autenticado como administrador.');
+      throw new Error('Você não tem permissão para adicionar links. Verifique se sua conta interna está ativa.');
     }
     // Outros erros
     throw new Error(error.message || 'Erro ao adicionar o link');

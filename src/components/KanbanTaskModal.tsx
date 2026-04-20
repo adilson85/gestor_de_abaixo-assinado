@@ -33,8 +33,9 @@ import {
   getKanbanAttachments,
   deleteKanbanAttachment
 } from '../utils/kanban-storage';
-import { useAuth } from '../contexts/AuthContext';
 import clsx from 'clsx';
+import { useAuth } from '../contexts/AuthContext';
+import { canAccessScopedKanbanTask } from '../utils/access';
 
 interface KanbanTaskModalProps {
   task: KanbanTask;
@@ -50,6 +51,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   boardId
 }) => {
   const navigate = useNavigate();
+  const { appUser, permissions, role, can } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   
@@ -83,6 +85,13 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionPosition, setMentionPosition] = useState(0);
   const [comments, setComments] = useState<KanbanComment[]>([]);
+  const canViewLinkedPetition = can('petitions.view', 'any');
+  const canEditTask = canAccessScopedKanbanTask(task, permissions, 'kanban.edit', appUser?.userId, role);
+  const canArchiveTask = canAccessScopedKanbanTask(task, permissions, 'kanban.archive', appUser?.userId, role);
+  const canCommentTask = canAccessScopedKanbanTask(task, permissions, 'kanban.comment', appUser?.userId, role);
+  const canAttachToTask = canAccessScopedKanbanTask(task, permissions, 'kanban.attachment', appUser?.userId, role);
+  const canAssignUsers = canAccessScopedKanbanTask(task, permissions, 'kanban.assign_users', appUser?.userId, role);
+  const canManageTaskLabels = can('kanban.manage_labels', 'any');
 
   useEffect(() => {
     loadLabels();
@@ -130,6 +139,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleCreateChecklist = async () => {
+    if (!canEditTask) return;
     if (!newChecklistTitle.trim()) return;
 
     try {
@@ -145,6 +155,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleCreateChecklistItem = async (checklistId: string) => {
+    if (!canEditTask) return;
     const itemText = newChecklistItem[checklistId];
     if (!itemText?.trim()) return;
 
@@ -164,6 +175,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleToggleChecklistItem = async (itemId: string, isCompleted: boolean) => {
+    if (!canEditTask) return;
     try {
       const success = await toggleKanbanChecklistItem(itemId, isCompleted);
       if (success) {
@@ -180,6 +192,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleDeleteChecklistItem = async (itemId: string, checklistId: string) => {
+    if (!canEditTask) return;
     try {
       const success = await deleteKanbanChecklistItem(itemId);
       if (success) {
@@ -195,6 +208,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleDeleteChecklist = async (checklistId: string) => {
+    if (!canEditTask) return;
     try {
       const success = await deleteKanbanChecklist(checklistId);
       if (success) {
@@ -215,6 +229,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleAddAttachment = async () => {
+    if (!canAttachToTask) return;
     if (!newAttachmentUrl.trim()) return;
 
     try {
@@ -236,6 +251,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!canAttachToTask) return;
     try {
       const success = await deleteKanbanAttachment(attachmentId);
       if (success) {
@@ -247,6 +263,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (!canEditTask) return;
     try {
       const success = await updateKanbanTask(editedTask.id, {
         title: editedTask.title,
@@ -265,6 +282,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleAddComment = async () => {
+    if (!canCommentTask) return;
     if (!newComment.trim()) return;
 
     try {
@@ -283,6 +301,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleAssignUser = async (userId: string) => {
+    if (!canAssignUsers) return;
     try {
       const success = await assignUserToTask(editedTask.id, userId);
       if (success) {
@@ -292,7 +311,11 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
           taskId: editedTask.id,
           userId,
           assignedAt: new Date(),
-          user: { id: userId, email: 'Usuário' } // TODO: Get actual user data
+          user: {
+            id: userId,
+            email: selectedUser?.email || 'perfil-interno@indisponivel',
+            name: selectedUser?.name,
+          }
         }];
         setEditedTask({ ...editedTask, assignees: updatedAssignees });
       }
@@ -302,6 +325,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleUnassignUser = async (userId: string) => {
+    if (!canAssignUsers) return;
     try {
       const success = await unassignUserFromTask(editedTask.id, userId);
       if (success) {
@@ -314,6 +338,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleAddLabel = async (labelId: string) => {
+    if (!canManageTaskLabels || !canEditTask) return;
     try {
       const success = await addLabelToTask(editedTask.id, labelId);
       if (success) {
@@ -334,6 +359,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleRemoveLabel = async (labelId: string) => {
+    if (!canManageTaskLabels || !canEditTask) return;
     try {
       const success = await removeLabelFromTask(editedTask.id, labelId);
       if (success) {
@@ -346,6 +372,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleCreateLabel = async () => {
+    if (!canManageTaskLabels) return;
     if (!newLabelName.trim()) return;
 
     try {
@@ -435,6 +462,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
   };
 
   const handleArchive = async () => {
+    if (!canArchiveTask) return;
     try {
       const success = await updateKanbanTask(editedTask.id, { isArchived: true });
       if (success) {
@@ -514,18 +542,22 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
               </>
             ) : (
               <>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <Edit3 size={16} />
-                </button>
-                <button
-                  onClick={handleArchive}
-                  className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                >
-                  <Archive size={16} />
-                </button>
+                {canEditTask ? (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <Edit3 size={16} />
+                  </button>
+                ) : null}
+                {canArchiveTask ? (
+                  <button
+                    onClick={handleArchive}
+                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <Archive size={16} />
+                  </button>
+                ) : null}
               </>
             )}
             <button
@@ -563,7 +595,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
               </div>
 
               {/* Botão para acessar abaixo-assinado - Acima do Checklist */}
-              {editedTask.petitionId && (
+              {editedTask.petitionId && canViewLinkedPetition ? (
                 <div className="mb-4">
                   <button
                     onClick={() => {
@@ -577,7 +609,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     Acessar Abaixo-Assinado
                   </button>
                 </div>
-              )}
+              ) : null}
 
               {/* Checklist */}
               <div>
@@ -602,12 +634,14 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                               {checklist.title}
                             </span>
                           </div>
-                          <button
-                            onClick={() => handleDeleteChecklist(checklist.id)}
-                            className="text-gray-400 hover:text-red-500 p-1 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canEditTask ? (
+                            <button
+                              onClick={() => handleDeleteChecklist(checklist.id)}
+                              className="text-gray-400 hover:text-red-500 p-1 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : null}
                         </div>
                         
                         {/* Barra de Progresso */}
@@ -636,17 +670,20 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                                 type="checkbox"
                                 checked={item.isCompleted}
                                 onChange={(e) => handleToggleChecklistItem(item.id, e.target.checked)}
+                                disabled={!canEditTask}
                                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                               />
                               <span className={`flex-1 text-sm ${item.isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {item.text}
                               </span>
-                              <button
-                                onClick={() => handleDeleteChecklistItem(item.id, checklist.id)}
-                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 transition-all"
-                              >
-                                <X size={12} />
-                              </button>
+                              {canEditTask ? (
+                                <button
+                                  onClick={() => handleDeleteChecklistItem(item.id, checklist.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 transition-all"
+                                >
+                                  <X size={12} />
+                                </button>
+                              ) : null}
                             </div>
                           ))}
                         </div>
@@ -661,6 +698,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                               [checklist.id]: e.target.value 
                             })}
                             placeholder="Adicionar um item"
+                            disabled={!canEditTask}
                             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             onKeyPress={(e) => e.key === 'Enter' && handleCreateChecklistItem(checklist.id)}
                           />
@@ -701,7 +739,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                       </button>
                     </div>
                   </div>
-                ) : (
+                ) : canEditTask ? (
                   <button
                     onClick={() => setShowAddChecklist(true)}
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -709,7 +747,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     <Plus size={14} />
                     Adicionar Checklist
                   </button>
-                )}
+                ) : null}
               </div>
 
               {/* Attachments */}
@@ -743,12 +781,14 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                           {attachment.url}
                         </a>
                       </div>
-                      <button
-                        onClick={() => handleDeleteAttachment(attachment.id)}
-                        className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
-                      >
-                        <X size={14} />
-                      </button>
+                      {canAttachToTask ? (
+                        <button
+                          onClick={() => handleDeleteAttachment(attachment.id)}
+                          className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                        >
+                          <X size={14} />
+                        </button>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -804,7 +844,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                       </button>
                     </div>
                   </div>
-                ) : (
+                ) : canAttachToTask ? (
                   <button
                     onClick={() => setShowAddAttachment(true)}
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
@@ -812,7 +852,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     <Plus size={14} />
                     Adicionar Anexo
                   </button>
-                )}
+                ) : null}
               </div>
 
               {/* Comments */}
@@ -826,7 +866,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {comment.author?.email || 'Usuário'}
+                          {comment.author?.name || comment.author?.email || 'Usuário'}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(comment.createdAt).toLocaleString('pt-BR')}
@@ -889,7 +929,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     </div>
                     <button
                       onClick={handleAddComment}
-                      disabled={isAddingComment || !newComment.trim()}
+                      disabled={!canCommentTask || isAddingComment || !newComment.trim()}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isAddingComment ? 'Enviando...' : 'Enviar'}
@@ -911,6 +951,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     type="date"
                     value={editedTask.dueDate ? 
                       new Date(editedTask.dueDate).toLocaleDateString('en-CA') : ''}
+                    disabled={!canEditTask}
                     onChange={async (e) => {
                       const newDueDate = e.target.value ? 
                         new Date(e.target.value + 'T23:59:59') : undefined;
@@ -956,18 +997,20 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                     <div key={assignee.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                          {assignee.user?.email?.charAt(0).toUpperCase()}
+                          {(assignee.user?.name || assignee.user?.email || '?').charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {assignee.user?.email}
+                          {assignee.user?.name || assignee.user?.email}
                         </span>
                       </div>
-                      <button
-                        onClick={() => handleUnassignUser(assignee.userId)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X size={14} />
-                      </button>
+                      {canAssignUsers ? (
+                        <button
+                          onClick={() => handleUnassignUser(assignee.userId)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X size={14} />
+                        </button>
+                      ) : null}
                     </div>
                   ))}
                   
@@ -999,15 +1042,15 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                         Cancelar
                       </button>
                     </div>
-                  ) : (
-                    <button 
+                  ) : canAssignUsers ? (
+                    <button
                       onClick={() => setShowUserSelector(true)}
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
                     >
                       <Plus size={14} />
                       Adicionar responsável
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -1027,23 +1070,27 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                       }}
                     >
                       <span>{taskLabel.label?.name}</span>
-                      <button
-                        onClick={() => handleRemoveLabel(taskLabel.labelId)}
-                        className="hover:text-red-500"
-                      >
-                        <X size={12} />
-                      </button>
+                      {canManageTaskLabels && canEditTask ? (
+                        <button
+                          onClick={() => handleRemoveLabel(taskLabel.labelId)}
+                          className="hover:text-red-500"
+                        >
+                          <X size={12} />
+                        </button>
+                      ) : null}
                     </div>
                   ))}
                 </div>
                 
-                <button
-                  onClick={() => setShowLabelSelector(!showLabelSelector)}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
-                >
-                  <Plus size={14} />
-                  Adicionar etiqueta
-                </button>
+                {canManageTaskLabels && canEditTask ? (
+                  <button
+                    onClick={() => setShowLabelSelector(!showLabelSelector)}
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
+                  >
+                    <Plus size={14} />
+                    Adicionar etiqueta
+                  </button>
+                ) : null}
 
                 {showLabelSelector && (
                   <div className="mt-2 space-y-2">
@@ -1106,7 +1153,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                           </button>
                         </div>
                       </div>
-                    ) : (
+                    ) : canManageTaskLabels ? (
                       <button
                         onClick={() => setShowCreateLabel(true)}
                         className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
@@ -1114,7 +1161,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                         <Plus size={14} />
                         Criar nova etiqueta
                       </button>
-                    )}
+                    ) : null}
                     
                     <button
                       onClick={() => setShowLabelSelector(false)}
@@ -1133,6 +1180,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({
                 </h3>
                 <select
                   value={editedTask.priority || 'medium'}
+                  disabled={!canEditTask}
                   onChange={async (e) => {
                     console.log('🔄 Prioridade alterada:', e.target.value);
                     const newPriority = e.target.value as 'low' | 'medium' | 'high';

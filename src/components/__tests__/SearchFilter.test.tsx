@@ -11,8 +11,8 @@ describe('SearchFilter', () => {
   it('should render with placeholder', () => {
     render(
       <SearchFilter
-        value=""
-        onChange={mockOnChange}
+        searchTerm=""
+        onSearchChange={mockOnChange}
         placeholder="Search..."
       />
     );
@@ -24,8 +24,8 @@ describe('SearchFilter', () => {
   it('should display current value', () => {
     render(
       <SearchFilter
-        value="test value"
-        onChange={mockOnChange}
+        searchTerm="test value"
+        onSearchChange={mockOnChange}
         placeholder="Search..."
       />
     );
@@ -37,8 +37,8 @@ describe('SearchFilter', () => {
   it('should call onChange when typing', () => {
     render(
       <SearchFilter
-        value=""
-        onChange={mockOnChange}
+        searchTerm=""
+        onSearchChange={mockOnChange}
         placeholder="Search..."
       />
     );
@@ -50,33 +50,24 @@ describe('SearchFilter', () => {
     expect(mockOnChange).toHaveBeenCalledWith('new search');
   });
 
-  it('should be disabled when disabled prop is true', () => {
+  it('should render optional filters content', () => {
     render(
       <SearchFilter
-        value=""
-        onChange={mockOnChange}
+        searchTerm=""
+        onSearchChange={mockOnChange}
         placeholder="Search..."
-        disabled={true}
+        filters={<button type="button">Filtro</button>}
       />
     );
 
-    const input = screen.getByPlaceholderText('Search...');
-    expect(input).toBeDisabled();
+    expect(screen.getByText('Filtro')).toBeInTheDocument();
   });
 
-  it('should not call onChange when disabled', () => {
+  it('should keep the default placeholder when none is provided', () => {
     render(
-      <SearchFilter
-        value=""
-        onChange={mockOnChange}
-        placeholder="Search..."
-        disabled={true}
-      />
+      <SearchFilter searchTerm="" onSearchChange={mockOnChange} />
     );
 
-    const input = screen.getByPlaceholderText('Search...');
-    fireEvent.change(input, { target: { value: 'test' } });
-
-    expect(mockOnChange).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('Buscar...')).toBeInTheDocument();
   });
 });

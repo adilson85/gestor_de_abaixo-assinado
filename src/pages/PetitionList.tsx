@@ -20,6 +20,7 @@ import { Pagination } from '../components/Pagination';
 import { deletePetition, getPetitions, getSignatureCount } from '../utils/supabase-storage';
 import { getPublicPetitionUrl } from '../utils/public-url';
 import { Petition } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 type StatusFilter = 'all' | 'public' | 'internal';
 
@@ -54,6 +55,7 @@ const getAvailabilityBadge = (petition: Petition) =>
       };
 
 export const PetitionList: React.FC = () => {
+  const { can } = useAuth();
   const [petitions, setPetitions] = useState<Petition[]>([]);
   const [signatureCounts, setSignatureCounts] = useState<Record<string, number>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,6 +67,8 @@ export const PetitionList: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [petitionToDelete, setPetitionToDelete] = useState<Petition | null>(null);
   const itemsPerPage = 8;
+  const canCreatePetitions = can('petitions.create', 'any');
+  const canDeletePetitions = can('petitions.delete', 'any');
 
   useEffect(() => {
     const loadData = async () => {
@@ -211,13 +215,15 @@ export const PetitionList: React.FC = () => {
             </p>
           </div>
 
-          <Link
-            to="/petitions/new"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <Plus size={16} />
-            Nova campanha
-          </Link>
+          {canCreatePetitions ? (
+            <Link
+              to="/petitions/new"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              <Plus size={16} />
+              Nova campanha
+            </Link>
+          ) : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -372,7 +378,7 @@ export const PetitionList: React.FC = () => {
                 : 'Ajuste busca, local ou status para encontrar as campanhas certas.'}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              {petitions.length === 0 ? (
+              {petitions.length === 0 && canCreatePetitions ? (
                 <Link
                   to="/petitions/new"
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
@@ -523,13 +529,15 @@ export const PetitionList: React.FC = () => {
                           </a>
                         ) : null}
 
-                        <button
-                          onClick={() => setPetitionToDelete(petition)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
-                        >
-                          <Trash2 size={15} />
-                          Excluir
-                        </button>
+                        {canDeletePetitions ? (
+                          <button
+                            onClick={() => setPetitionToDelete(petition)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
+                          >
+                            <Trash2 size={15} />
+                            Excluir
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

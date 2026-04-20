@@ -25,6 +25,22 @@
   function = "admin-management/check-admin"
   path = "/api/admin-management/check-admin"
 
+[[edge_functions]]
+  function = "admin-management/reset-password"
+  path = "/api/admin-management/reset-password"
+
+[[edge_functions]]
+  function = "admin-management/export-data"
+  path = "/api/admin-management/export-data"
+
+[[edge_functions]]
+  function = "admin-management/import-backup"
+  path = "/api/admin-management/import-backup"
+
+[[edge_functions]]
+  function = "admin-management/wipe-data"
+  path = "/api/admin-management/wipe-data"
+
 # Configuração de headers de segurança
 [[headers]]
   for = "/*"

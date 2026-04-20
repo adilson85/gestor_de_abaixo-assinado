@@ -23,12 +23,15 @@ import {
   searchKanbanTasks,
   updateKanbanTask,
 } from '../utils/kanban-storage';
+import { useAuth } from '../contexts/AuthContext';
+import { canAccessScopedKanbanTask, getKanbanViewScopeLabel } from '../utils/access';
 
 interface KanbanBoardProps {
   petitionId?: string;
 }
 
 export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
+  const { appUser, permissions, role } = useAuth();
   const [board, setBoard] = useState<KanbanBoard | null>(null);
   const [columns, setColumns] = useState<KanbanColumnType[]>([]);
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -54,6 +57,9 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
       },
     })
   );
+  const kanbanScopeLabel = getKanbanViewScopeLabel(permissions, role);
+  const canMoveTask = (task: KanbanTask) =>
+    canAccessScopedKanbanTask(task, permissions, 'kanban.move', appUser?.userId, role);
 
   useEffect(() => {
     loadBoardData();
@@ -132,6 +138,10 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find((item) => item.id === event.active.id);
+    if (task && !canMoveTask(task)) {
+      setActiveTask(null);
+      return;
+    }
     setActiveTask(task || null);
   };
 
@@ -153,6 +163,11 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
     const draggedTask = tasks.find((task) => task.id === taskId);
 
     if (!draggedTask) {
+      setActiveTask(null);
+      return;
+    }
+
+    if (!canMoveTask(draggedTask)) {
       setActiveTask(null);
       return;
     }
@@ -366,6 +381,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Visualize as tarefas por etapa e mova cada item conforme a execução avançar.
           </p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{kanbanScopeLabel}</p>
         </div>
 
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
@@ -383,6 +399,7 @@ export const KanbanBoardComponent: React.FC<KanbanBoardProps> = () => {
                     tasks={getTasksForColumn(column.id)}
                     onTaskClick={handleTaskClick}
                     onTaskCreate={handleTaskCreate}
+                    canMoveTask={canMoveTask}
                   />
                 </div>
               ))}

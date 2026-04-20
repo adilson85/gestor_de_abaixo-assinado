@@ -10,12 +10,14 @@ interface KanbanColumnProps {
   column: KanbanColumnType;
   tasks: KanbanTask[];
   onTaskClick: (task: KanbanTask) => void;
+  canMoveTask?: (task: KanbanTask) => boolean;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   column,
   tasks,
-  onTaskClick
+  onTaskClick,
+  canMoveTask,
 }) => {
 
   const { setNodeRef } = useDroppable({
@@ -157,6 +159,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               key={task.id}
               task={task}
               onClick={() => onTaskClick(task)}
+              sortable={canMoveTask ? canMoveTask(task) : true}
             />
           ))}
         </SortableContext>

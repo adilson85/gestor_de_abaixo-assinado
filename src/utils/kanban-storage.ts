@@ -1,18 +1,181 @@
 import { supabase } from '../lib/supabase';
+import { getActiveAppUsersByIds } from './app-users';
 import { 
+  AppUser,
   KanbanBoard, 
   KanbanColumn, 
   KanbanTask, 
-  KanbanTaskAssignee,
   KanbanLabel,
-  KanbanTaskLabel,
   KanbanChecklist,
   KanbanChecklistItem,
   KanbanAttachment,
   KanbanComment,
-  KanbanActivity,
   KanbanColumnDeadline
 } from '../types';
+
+type KanbanDisplayUser = {
+  id: string;
+  email: string;
+  name?: string;
+};
+
+type KanbanColumnTaskCountRow = {
+  column_id: string;
+  task_count: number | string | null;
+};
+
+const KANBAN_TASK_SELECT = `
+  *,
+  kanban_task_assignees (
+    id,
+    user_id,
+    assigned_at
+  ),
+  kanban_task_labels (
+    id,
+    label_id,
+    label:kanban_labels (
+      id,
+      name,
+      color
+    )
+  ),
+  kanban_checklists (
+    id,
+    title,
+    position,
+    created_at,
+    items:kanban_checklist_items (
+      id,
+      text,
+      is_completed,
+      position,
+      created_at
+    )
+  ),
+  kanban_attachments (
+    id,
+    type,
+    url,
+    file_name,
+    file_size,
+    mime_type,
+    created_by,
+    created_at
+  ),
+  kanban_comments (
+    id,
+    author_id,
+    content,
+    created_at,
+    updated_at
+  )
+`;
+
+const toKanbanDisplayUser = (appUser: AppUser): KanbanDisplayUser => ({
+  id: appUser.userId,
+  email: appUser.email,
+  name: appUser.fullName,
+});
+
+const getFallbackKanbanUser = (userId: string): KanbanDisplayUser => ({
+  id: userId,
+  email: 'perfil-interno@indisponivel',
+});
+
+const mapKanbanColumn = (column: any): KanbanColumn => ({
+  id: column.id,
+  boardId: column.board_id,
+  name: column.name,
+  position: column.position,
+  isActive: column.is_active === undefined || column.is_active === null ? true : Boolean(column.is_active),
+  createdAt: new Date(column.created_at),
+  updatedAt: new Date(column.updated_at),
+});
+
+const buildKanbanUserLookup = async (userIds: string[]): Promise<Map<string, KanbanDisplayUser>> => {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+
+  if (uniqueUserIds.length === 0) {
+    return new Map();
+  }
+
+  try {
+    const appUsers = await getActiveAppUsersByIds(uniqueUserIds);
+    return new Map(appUsers.map((appUser) => [appUser.userId, toKanbanDisplayUser(appUser)]));
+  } catch (error) {
+    console.error('Error loading app users for kanban entities:', error);
+    return new Map();
+  }
+};
+
+const mapTaskWithUsers = (
+  task: any,
+  boardId: string,
+  userLookup: Map<string, KanbanDisplayUser>
+): KanbanTask => ({
+  id: task.id,
+  boardId: task.board_id || boardId,
+  columnId: task.column_id,
+  title: task.title,
+  description: task.description,
+  priority: task.priority || 'medium',
+  dueDate: task.due_date ? new Date(task.due_date) : undefined,
+  position: task.position,
+  isArchived: task.is_archived,
+  createdBy: task.created_by || 'unknown',
+  createdAt: new Date(task.created_at),
+  updatedAt: new Date(task.updated_at),
+  petitionId: task.petition_id || undefined,
+  assignees: task.kanban_task_assignees?.map((assignee: any) => ({
+    id: assignee.id,
+    taskId: task.id,
+    userId: assignee.user_id,
+    assignedAt: new Date(assignee.assigned_at),
+    user: userLookup.get(assignee.user_id) || getFallbackKanbanUser(assignee.user_id),
+  })) || [],
+  labels: task.kanban_task_labels?.map((taskLabel: any) => ({
+    id: taskLabel.id,
+    taskId: task.id,
+    labelId: taskLabel.label_id,
+    label: taskLabel.label,
+  })) || [],
+  checklists: task.kanban_checklists?.map((checklist: any) => ({
+    id: checklist.id,
+    taskId: task.id,
+    title: checklist.title,
+    position: checklist.position,
+    createdAt: new Date(checklist.created_at),
+    items: checklist.items?.map((item: any) => ({
+      id: item.id,
+      checklistId: checklist.id,
+      text: item.text,
+      isCompleted: item.is_completed,
+      position: item.position,
+      createdAt: new Date(item.created_at),
+    })) || [],
+  })) || [],
+  attachments: task.kanban_attachments?.map((attachment: any) => ({
+    id: attachment.id,
+    taskId: task.id,
+    type: attachment.type,
+    url: attachment.url,
+    fileName: attachment.file_name,
+    fileSize: attachment.file_size,
+    mimeType: attachment.mime_type,
+    createdBy: attachment.created_by,
+    createdAt: new Date(attachment.created_at),
+  })) || [],
+  comments: task.kanban_comments?.map((comment: any) => ({
+    id: comment.id,
+    taskId: task.id,
+    authorId: comment.author_id,
+    content: comment.content,
+    createdAt: new Date(comment.created_at),
+    updatedAt: new Date(comment.updated_at),
+    author: userLookup.get(comment.author_id) || getFallbackKanbanUser(comment.author_id),
+  })) || [],
+});
 
 // ===== BOARD FUNCTIONS =====
 
@@ -52,24 +215,45 @@ export const getKanbanColumns = async (boardId: string): Promise<KanbanColumn[]>
     return [];
   }
 
-  return data.map(col => ({
-    id: col.id,
-    boardId: col.board_id,
-    name: col.name,
-    position: col.position,
-    isActive: col.is_active || true, // Valor padrão se não existir
-    createdAt: new Date(col.created_at),
-    updatedAt: new Date(col.updated_at)
-  }));
+  return data.map(mapKanbanColumn);
 };
 
-export const createKanbanColumn = async (boardId: string, name: string, position: number): Promise<KanbanColumn | null> => {
+export const createKanbanColumn = async (
+  boardId: string,
+  name: string,
+  position?: number
+): Promise<KanbanColumn | null> => {
+  const normalizedName = name.trim();
+
+  if (!normalizedName) {
+    return null;
+  }
+
+  let nextPosition = position;
+
+  if (typeof nextPosition !== 'number') {
+    const { data: lastColumn, error: lastColumnError } = await supabase
+      .from('kanban_columns')
+      .select('position')
+      .eq('board_id', boardId)
+      .order('position', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastColumnError) {
+      console.error('Error getting last kanban column position:', lastColumnError);
+      return null;
+    }
+
+    nextPosition = (lastColumn?.position ?? -1) + 1;
+  }
+
   const { data, error } = await supabase
     .from('kanban_columns')
     .insert({
       board_id: boardId,
-      name,
-      position
+      name: normalizedName,
+      position: nextPosition
     })
     .select()
     .single();
@@ -79,21 +263,33 @@ export const createKanbanColumn = async (boardId: string, name: string, position
     return null;
   }
 
-  return {
-    id: data.id,
-    boardId: data.board_id,
-    name: data.name,
-    position: data.position,
-    isActive: data.is_active,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at)
-  };
+  return mapKanbanColumn(data);
 };
 
 export const updateKanbanColumn = async (columnId: string, updates: { name?: string; position?: number }): Promise<boolean> => {
+  const updateData: Record<string, unknown> = {};
+
+  if (typeof updates.name === 'string') {
+    const normalizedName = updates.name.trim();
+
+    if (!normalizedName) {
+      return false;
+    }
+
+    updateData.name = normalizedName;
+  }
+
+  if (typeof updates.position === 'number') {
+    updateData.position = updates.position;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return true;
+  }
+
   const { error } = await supabase
     .from('kanban_columns')
-    .update(updates)
+    .update(updateData)
     .eq('id', columnId);
 
   if (error) {
@@ -104,18 +300,66 @@ export const updateKanbanColumn = async (columnId: string, updates: { name?: str
   return true;
 };
 
-export const deleteKanbanColumn = async (columnId: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('kanban_columns')
-    .update({ is_active: false })
-    .eq('id', columnId);
+export const getKanbanColumnTaskCounts = async (boardId: string): Promise<Record<string, number>> => {
+  const { data, error } = await supabase.rpc('get_kanban_column_task_counts', {
+    target_board_id: boardId,
+  });
 
   if (error) {
-    console.error('Error deleting kanban column:', error);
+    console.error('Error getting kanban column task counts:', error);
+    return {};
+  }
+
+  return (data as KanbanColumnTaskCountRow[] | null)?.reduce<Record<string, number>>((acc, row) => {
+    acc[row.column_id] = Number(row.task_count || 0);
+    return acc;
+  }, {}) || {};
+};
+
+export const reorderKanbanColumns = async (boardId: string, orderedColumnIds: string[]): Promise<boolean> => {
+  const { error } = await supabase.rpc('reorder_kanban_columns', {
+    target_board_id: boardId,
+    ordered_column_ids: orderedColumnIds,
+  });
+
+  if (error) {
+    console.error('Error reordering kanban columns:', error);
     return false;
   }
 
   return true;
+};
+
+export interface DeleteKanbanColumnResult {
+  success: boolean;
+  reason?: 'has_tasks' | 'error';
+  message?: string;
+}
+
+export const deleteKanbanColumn = async (columnId: string): Promise<DeleteKanbanColumnResult> => {
+  const { error } = await supabase.rpc('delete_empty_kanban_column', {
+    target_column_id: columnId,
+  });
+
+  if (error) {
+    const message = error.message || 'Erro ao excluir coluna do Kanban.';
+    const normalizedMessage = message.toLowerCase();
+
+    console.error('Error deleting kanban column:', error);
+
+    return {
+      success: false,
+      reason:
+        normalizedMessage.includes('card')
+        || normalizedMessage.includes('tarefa')
+        || normalizedMessage.includes('vinculad')
+          ? 'has_tasks'
+          : 'error',
+      message,
+    };
+  }
+
+  return { success: true };
 };
 
 export const deleteKanbanTask = async (taskId: string): Promise<boolean> => {
@@ -138,7 +382,7 @@ export const getKanbanTasks = async (boardId: string, includeArchived: boolean =
   // Buscar tarefas do board específico
   let query = supabase
     .from('kanban_tasks')
-    .select('*')
+    .select(KANBAN_TASK_SELECT)
     .eq('board_id', boardId);
 
   if (!includeArchived) {
@@ -152,69 +396,14 @@ export const getKanbanTasks = async (boardId: string, includeArchived: boolean =
     return [];
   }
 
-  return data.map(task => ({
-    id: task.id,
-    boardId: task.board_id || boardId,
-    columnId: task.column_id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority || 'medium',
-    dueDate: task.due_date ? new Date(task.due_date) : undefined,
-    position: task.position,
-    isArchived: task.is_archived,
-    createdBy: task.created_by || 'unknown',
-    createdAt: new Date(task.created_at),
-    updatedAt: new Date(task.updated_at),
-    petitionId: task.petition_id || undefined,
-    assignees: task.kanban_task_assignees?.map((assignee: any) => ({
-      id: assignee.id,
-      taskId: task.id,
-      userId: assignee.user_id,
-      assignedAt: new Date(assignee.assigned_at),
-      user: assignee.user
-    })) || [],
-    labels: task.kanban_task_labels?.map((taskLabel: any) => ({
-      id: taskLabel.id,
-      taskId: task.id,
-      labelId: taskLabel.label_id,
-      label: taskLabel.label
-    })) || [],
-    checklists: task.kanban_checklists?.map((checklist: any) => ({
-      id: checklist.id,
-      taskId: task.id,
-      title: checklist.title,
-      position: checklist.position,
-      createdAt: new Date(checklist.created_at),
-      items: checklist.items?.map((item: any) => ({
-        id: item.id,
-        checklistId: checklist.id,
-        text: item.text,
-        isCompleted: item.is_completed,
-        position: item.position,
-        createdAt: new Date(item.created_at)
-      })) || []
-    })) || [],
-    attachments: task.kanban_attachments?.map((attachment: any) => ({
-      id: attachment.id,
-      taskId: task.id,
-      type: attachment.type,
-      url: attachment.url,
-      fileName: attachment.file_name,
-      fileSize: attachment.file_size,
-      mimeType: attachment.mime_type,
-      createdBy: attachment.created_by,
-      createdAt: new Date(attachment.created_at)
-    })) || [],
-    comments: task.kanban_comments?.map((comment: any) => ({
-      id: comment.id,
-      taskId: task.id,
-      authorId: comment.author_id,
-      content: comment.content,
-      createdAt: new Date(comment.created_at),
-      updatedAt: new Date(comment.updated_at),
-      author: comment.author
-    })) || []
-  }));
+  const userLookup = await buildKanbanUserLookup(
+    data.flatMap((task: any) => [
+      ...(task.kanban_task_assignees?.map((assignee: any) => assignee.user_id) || []),
+      ...(task.kanban_comments?.map((comment: any) => comment.author_id) || []),
+    ])
+  );
+
+  return data.map((task) => mapTaskWithUsers(task, boardId, userLookup));
 };
 
 export const createKanbanTask = async (
@@ -226,6 +415,15 @@ export const createKanbanTask = async (
   dueDate?: Date,
   petitionId?: string
 ): Promise<KanbanTask | null> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    console.error('User not authenticated');
+    return null;
+  }
+
   // Get the next position in the column
   const { data: lastTask } = await supabase
     .from('kanban_tasks')
@@ -247,7 +445,8 @@ export const createKanbanTask = async (
       priority,
       due_date: dueDate?.toISOString(),
       position: nextPosition,
-      petition_id: petitionId
+      petition_id: petitionId,
+      created_by: user.id
     })
     .select()
     .single();
@@ -375,21 +574,23 @@ export const unassignUserFromTask = async (taskId: string, userId: string): Prom
 
 export const getAvailableUsers = async (): Promise<{ id: string; email: string; name?: string }[]> => {
   try {
-    // Lista hardcoded de usuários conhecidos para contornar problemas de RLS
-    const knownUsers = [
-      {
-        id: '4bde4d2e-9894-4063-8caf-eae2e34c5f4c',
-        email: 'matheus.mira@cvj.sc.gov.br',
-        name: 'Matheus Mira'
-      },
-      {
-        id: '4a9f97bb-7427-40fd-a721-5b51e5248872',
-        email: 'adilson.martins.jlle@gmail.com',
-        name: 'Adilson Martins'
-      }
-    ];
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('user_id, email, full_name')
+      .eq('is_active', true)
+      .order('full_name', { ascending: true, nullsFirst: false })
+      .order('email', { ascending: true });
 
-    return knownUsers;
+    if (error) {
+      console.error('Error getting available users:', error);
+      return [];
+    }
+
+    return (data || []).map((user) => ({
+      id: user.user_id,
+      email: user.email,
+      name: user.full_name || undefined,
+    }));
   } catch (error) {
     console.error('Error getting available users:', error);
     return [];
@@ -501,6 +702,8 @@ export const addCommentToTask = async (taskId: string, content: string): Promise
     return null;
   }
   
+  const userLookup = await buildKanbanUserLookup([user.id]);
+
   return {
     id: data.id,
     taskId: data.task_id,
@@ -508,9 +711,10 @@ export const addCommentToTask = async (taskId: string, content: string): Promise
     content: data.content,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
-    author: {
+    author: userLookup.get(user.id) || {
       id: user.id,
-      email: user.email || ''
+      email: user.email || 'perfil-interno@indisponivel',
+      name: typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : undefined,
     }
   };
 };
@@ -528,6 +732,8 @@ export const getKanbanComments = async (taskId: string): Promise<KanbanComment[]
   }
 
   // Mapear os comentários com informações do autor
+  const userLookup = await buildKanbanUserLookup(data.map((comment) => comment.author_id));
+
   return data.map(comment => ({
     id: comment.id,
     taskId: comment.task_id,
@@ -535,12 +741,7 @@ export const getKanbanComments = async (taskId: string): Promise<KanbanComment[]
     content: comment.content,
     createdAt: new Date(comment.created_at),
     updatedAt: new Date(comment.updated_at),
-    author: {
-      id: comment.author_id,
-      email: comment.author_id === '4a9f97bb-7427-40fd-a721-5b51e5248872' ? 'adilson.martins.jlle@gmail.com' : 
-             comment.author_id === '4bde4d2e-9894-4063-8caf-eae2e34c5f4c' ? 'matheus.mira@cvj.sc.gov.br' : 
-             'usuário@exemplo.com'
-    }
+    author: userLookup.get(comment.author_id) || getFallbackKanbanUser(comment.author_id),
   }));
 };
 
@@ -559,23 +760,7 @@ export const searchKanbanTasks = async (
 ): Promise<KanbanTask[]> => {
   let query = supabase
     .from('kanban_tasks')
-    .select(`
-      *,
-      kanban_task_assignees (
-        id,
-        user_id,
-        assigned_at,
-      ),
-      kanban_task_labels (
-        id,
-        label_id,
-        label:kanban_labels (
-          id,
-          name,
-          color
-        )
-      )
-    `)
+    .select(KANBAN_TASK_SELECT)
     .eq('board_id', boardId)
     .eq('is_archived', false);
 
@@ -635,34 +820,14 @@ export const searchKanbanTasks = async (
     return [];
   }
 
-  return data.map(task => ({
-    id: task.id,
-    boardId: task.board_id || boardId,
-    columnId: task.column_id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority || 'medium',
-    dueDate: task.due_date ? new Date(task.due_date) : undefined,
-    position: task.position,
-    isArchived: task.is_archived,
-    createdBy: task.created_by || 'unknown',
-    createdAt: new Date(task.created_at),
-    updatedAt: new Date(task.updated_at),
-    petitionId: task.petition_id || undefined,
-    assignees: task.kanban_task_assignees?.map((assignee: any) => ({
-      id: assignee.id,
-      taskId: task.id,
-      userId: assignee.user_id,
-      assignedAt: new Date(assignee.assigned_at),
-      user: assignee.user
-    })) || [],
-    labels: task.kanban_task_labels?.map((taskLabel: any) => ({
-      id: taskLabel.id,
-      taskId: task.id,
-      labelId: taskLabel.label_id,
-      label: taskLabel.label
-    })) || []
-  }));
+  const userLookup = await buildKanbanUserLookup(
+    data.flatMap((task: any) => [
+      ...(task.kanban_task_assignees?.map((assignee: any) => assignee.user_id) || []),
+      ...(task.kanban_comments?.map((comment: any) => comment.author_id) || []),
+    ])
+  );
+
+  return data.map((task) => mapTaskWithUsers(task, boardId, userLookup));
 };
 
 // ===== CHECKLIST FUNCTIONS =====

@@ -30,13 +30,18 @@ import {
   saveSignature, 
   checkPhoneDuplicate,
   updateSignatureMessageStatus,
+  updateMultipleSignatureMessageStatus,
   updateSignature,
   deleteSignature,
   hasKanbanTasks,
   createKanbanTaskForPetition
 } from '../utils/supabase-storage';
 import { generateBotConversaUrl, isValidWhatsAppNumber } from '../utils/whatsapp-utils';
-import { exportToCSV } from '../utils/export';
+import {
+  downloadHtmlDocument,
+  exportToCSV,
+  generatePublicSectorPresentationDocument
+} from '../utils/export';
 import { Petition, Signature, PetitionResource } from '../types';
 import { validateName, validatePhone, validateState, validateZipCode, normalizePhone, formatPhone } from '../utils/validation';
 import { fetchAddressByCEP, formatCEP } from '../utils/cep';
@@ -48,12 +53,14 @@ import { getPetitionResources, addPetitionResource, deletePetitionResource } fro
 import { uploadImage, deleteImage } from '../utils/image-storage';
 import { getPublicPetitionUrl } from '../utils/public-url';
 import { getPublicationChecklist, isPublicationReady } from '../utils/publication-readiness';
+import { useAuth } from '../contexts/AuthContext';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
 
 export const PetitionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [petition, setPetition] = useState<Petition | null>(null);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [activeTab, setActiveTab] = useState<'signatures' | 'settings' | 'export' | 'links'>('signatures');
@@ -65,6 +72,17 @@ export const PetitionDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const itemsPerPage = 10;
   const publicPetitionUrl = petition ? getPublicPetitionUrl(petition.slug) : '';
+  const canViewSignatures = can('signatures.view', 'any');
+  const canCreateManualSignature = can('signatures.create_manual', 'any');
+  const canEditSignatures = can('signatures.edit', 'any');
+  const canDeleteSignatures = can('signatures.delete', 'any');
+  const canUpdateMessageStatus = can('signatures.message_status', 'any');
+  const canViewPetitionSettings = can('petitions.edit', 'any') || can('petitions.publish', 'any');
+  const canEditPetition = can('petitions.edit', 'any');
+  const canPublishPetition = can('petitions.publish', 'any');
+  const canManageResources = can('petition_resources.manage', 'any');
+  const canExportSignatures = can('signatures.export', 'any');
+  const canCreateKanbanTask = can('kanban.create', 'any');
 
   // Debounce search term for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -97,6 +115,7 @@ export const PetitionDetail: React.FC = () => {
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [hasTask, setHasTask] = useState<boolean | null>(null);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [bulkMessageStatusAction, setBulkMessageStatusAction] = useState<'sent' | 'unsent' | null>(null);
 
   // Settings form state
   const [isLoadingCEP, setIsLoadingCEP] = useState(false);
@@ -261,6 +280,45 @@ export const PetitionDetail: React.FC = () => {
           ? { ...sig, mensagemEnviada }
           : sig
       ));
+    }
+  };
+
+  const handleBulkMessageStatusUpdate = async (mensagemEnviada: boolean) => {
+    if (!petition || !canUpdateMessageStatus || filteredSignatures.length === 0) return;
+
+    const actionLabel = mensagemEnviada ? 'marcar como "Sim"' : 'marcar como "Não"';
+    const filteredIds = filteredSignatures.map((signature) => signature.id);
+
+    if (
+      !confirm(
+        `Deseja ${actionLabel} ${filteredIds.length} assinatura(s) com base nos filtros atuais?`
+      )
+    ) {
+      return;
+    }
+
+    setBulkMessageStatusAction(mensagemEnviada ? 'sent' : 'unsent');
+
+    try {
+      const updatedCount = await updateMultipleSignatureMessageStatus(petition.id, filteredIds, mensagemEnviada);
+      const filteredIdSet = new Set(filteredIds);
+
+      setSignatures((previous) =>
+        previous.map((signature) =>
+          filteredIdSet.has(signature.id) ? { ...signature, mensagemEnviada } : signature
+        )
+      );
+
+      alert(
+        `${updatedCount} assinatura(s) foram marcadas como ${
+          mensagemEnviada ? '"Sim"' : '"Não"'
+        }.`
+      );
+    } catch (error) {
+      console.error('Error updating multiple message statuses:', error);
+      alert('Não foi possível atualizar o status de mensagem em lote. Tente novamente.');
+    } finally {
+      setBulkMessageStatusAction(null);
     }
   };
 
@@ -597,15 +655,14 @@ export const PetitionDetail: React.FC = () => {
     if (!petition) return;
 
     const htmlContent = generateBlankSignatureDocument(petition);
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `coleta-assinaturas-${petition.slug}.html`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadHtmlDocument(htmlContent, `coleta-assinaturas-${petition.slug}.html`);
+  };
+
+  const handleExportPublicSectorDocument = () => {
+    if (!petition || signatures.length === 0) return;
+
+    const htmlContent = generatePublicSectorPresentationDocument(petition, signatures);
+    downloadHtmlDocument(htmlContent, `apresentacao-setor-publico-${petition.slug}.html`);
   };
 
   const handleCreateKanbanTask = async () => {
@@ -821,6 +878,26 @@ export const PetitionDetail: React.FC = () => {
 
   const uniqueCities = Array.from(new Set(signatures.map(s => s.city).filter(Boolean))).sort();
   const uniqueStates = Array.from(new Set(signatures.map(s => s.state).filter(Boolean))).sort();
+  const availableTabs = [
+    canViewSignatures
+      ? { key: 'signatures' as const, label: 'Assinaturas', icon: Users }
+      : null,
+    { key: 'links' as const, label: canManageResources ? 'Links e recursos' : 'Materiais', icon: ExternalLink },
+    canViewPetitionSettings
+      ? { key: 'settings' as const, label: 'Configurações', icon: Settings }
+      : null,
+    canExportSignatures
+      ? { key: 'export' as const, label: 'Exportar', icon: Download }
+      : null,
+  ].filter(Boolean) as { key: 'signatures' | 'settings' | 'export' | 'links'; label: string; icon: typeof Users }[];
+
+  const activeTabIsAvailable = availableTabs.some((tab) => tab.key === activeTab);
+
+  useEffect(() => {
+    if (!activeTabIsAvailable && availableTabs.length > 0) {
+      setActiveTab(availableTabs[0].key);
+    }
+  }, [activeTabIsAvailable, availableTabs]);
 
   if (loading) {
     return (
@@ -866,7 +943,7 @@ export const PetitionDetail: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{petition.name}</h1>
-              {hasTask === false && (
+              {hasTask === false && canCreateKanbanTask && (
                 <button
                   onClick={handleCreateKanbanTask}
                   disabled={isCreatingTask}
@@ -950,12 +1027,8 @@ export const PetitionDetail: React.FC = () => {
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8">
-          {[
-            { key: 'signatures', label: 'Assinaturas', icon: Users },
-            { key: 'links', label: 'Links', icon: ExternalLink },
-            { key: 'settings', label: 'Configurações', icon: Settings },
-            { key: 'export', label: 'Exportar', icon: Download },
-          ].map(({ key, label, icon: Icon }) => (
+          {availableTabs.map(({ key, label, icon: Icon }) => {
+            return (
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
@@ -968,7 +1041,8 @@ export const PetitionDetail: React.FC = () => {
               <Icon size={16} />
               {label}
             </button>
-          ))}
+            );
+          })}
         </nav>
       </div>
 
@@ -977,13 +1051,15 @@ export const PetitionDetail: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assinaturas ({signatures.length})</h2>
-            <button
-              onClick={() => setShowAddSignature(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <Plus size={20} />
-              Digitalizar Assinatura
-            </button>
+            {canCreateManualSignature ? (
+              <button
+                onClick={() => setShowAddSignature(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Plus size={20} />
+                Digitalizar Assinatura
+              </button>
+            ) : null}
           </div>
 
           {/* Search and Filters */}
@@ -1022,6 +1098,40 @@ export const PetitionDetail: React.FC = () => {
                 </select>
               </div>
             </div>
+
+            {canUpdateMessageStatus ? (
+              <div className="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 lg:flex-row lg:items-center lg:justify-between">
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Aplicar nos filtros atuais: <strong>{filteredSignatures.length}</strong> assinatura(s).
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleBulkMessageStatusUpdate(true)}
+                    disabled={filteredSignatures.length === 0 || bulkMessageStatusAction !== null}
+                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {bulkMessageStatusAction === 'sent' ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                    ) : (
+                      <CheckCircle size={16} />
+                    )}
+                    Marcar filtradas como Sim
+                  </button>
+                  <button
+                    onClick={() => handleBulkMessageStatusUpdate(false)}
+                    disabled={filteredSignatures.length === 0 || bulkMessageStatusAction !== null}
+                    className="inline-flex items-center gap-2 rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-600 dark:hover:bg-gray-500"
+                  >
+                    {bulkMessageStatusAction === 'unsent' ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                    ) : (
+                      <XCircle size={16} />
+                    )}
+                    Marcar filtradas como Não
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Signatures List */}
@@ -1041,7 +1151,7 @@ export const PetitionDetail: React.FC = () => {
                     : 'Digite a primeira assinatura deste abaixo-assinado físico'
                   }
                 </p>
-                {!searchTerm && (
+                {!searchTerm && canCreateManualSignature && (
                   <button
                     onClick={() => setShowAddSignature(true)}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
@@ -1085,13 +1195,15 @@ export const PetitionDetail: React.FC = () => {
                                   {signature.name}
                                 </span>
                               </div>
-                              <button
-                                onClick={() => handleEditSignature(signature)}
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                title="Editar assinante"
-                              >
-                                <Edit3 size={14} />
-                              </button>
+                              {canEditSignatures ? (
+                                <button
+                                  onClick={() => handleEditSignature(signature)}
+                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  title="Editar assinante"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                              ) : null}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -1123,9 +1235,13 @@ export const PetitionDetail: React.FC = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!canUpdateMessageStatus) {
+                                    return;
+                                  }
                                   handleToggleMessageStatus(signature.id, !(signature.mensagemEnviada || false));
                                 }}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                disabled={!canUpdateMessageStatus}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                   (signature.mensagemEnviada || false)
                                     ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1164,18 +1280,20 @@ export const PetitionDetail: React.FC = () => {
                               <span className="text-sm text-gray-900 dark:text-gray-100">
                                 {signature.createdAt.toLocaleDateString('pt-BR')}
                               </span>
-                              <button
-                                onClick={() => handleDeleteSignature(signature.id, signature.name)}
-                                disabled={deletingSignatureId === signature.id}
-                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Excluir assinatura"
-                              >
-                                {deletingSignatureId === signature.id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                                ) : (
-                                  <Trash2 size={14} />
-                                )}
-                              </button>
+                              {canDeleteSignatures ? (
+                                <button
+                                  onClick={() => handleDeleteSignature(signature.id, signature.name)}
+                                  disabled={deletingSignatureId === signature.id}
+                                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Excluir assinatura"
+                                >
+                                  {deletingSignatureId === signature.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                  ) : (
+                                    <Trash2 size={14} />
+                                  )}
+                                </button>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -1202,10 +1320,15 @@ export const PetitionDetail: React.FC = () => {
         <div>
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Links (YouTube / Google Drive)</h2>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Cadastre materiais relacionados ao tema.</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              {canManageResources
+                ? 'Cadastre materiais relacionados ao tema.'
+                : 'Consulte os materiais da campanha. A edição de links exige permissão específica.'}
+            </p>
           </div>
 
-          <form
+          {canManageResources ? (
+            <form
             onSubmit={async (e) => {
               e.preventDefault();
               setResourceError('');
@@ -1306,7 +1429,8 @@ export const PetitionDetail: React.FC = () => {
                 )}
               </button>
             </div>
-          </form>
+            </form>
+          ) : null}
 
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
             {resources.length === 0 ? (
@@ -1321,15 +1445,17 @@ export const PetitionDetail: React.FC = () => {
                         <ExternalLink size={14} /> {r.url}
                       </a>
                     </div>
-                    <button
-                      onClick={async () => {
-                        const ok = await deletePetitionResource(r.id);
-                        if (ok) setResources((prev) => prev.filter((x) => x.id !== r.id));
-                      }}
-                      className="text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400"
-                    >
-                      Remover
-                    </button>
+                    {canManageResources ? (
+                      <button
+                        onClick={async () => {
+                          const ok = await deletePetitionResource(r.id);
+                          if (ok) setResources((prev) => prev.filter((x) => x.id !== r.id));
+                        }}
+                        className="text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400"
+                      >
+                        Remover
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -1343,14 +1469,22 @@ export const PetitionDetail: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Informações Básicas</h3>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                <Edit3 size={16} />
-                {isEditing ? 'Cancelar' : 'Editar'}
-              </button>
+              {canEditPetition ? (
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  <Edit3 size={16} />
+                  {isEditing ? 'Cancelar' : 'Editar'}
+                </button>
+              ) : null}
             </div>
+
+            {!canEditPetition ? (
+              <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+                Seu acesso permite consultar esta campanha, mas nao editar os dados basicos.
+              </div>
+            ) : null}
 
             {isEditing ? (
               <form onSubmit={handleUpdatePetition} className="space-y-4">
@@ -1538,6 +1672,11 @@ export const PetitionDetail: React.FC = () => {
                   <p className="text-gray-900 dark:text-gray-100">
                     {petition.signatureGoal ? formatNumber(petition.signatureGoal) : '—'}
                   </p>
+                  {!canPublishPetition ? (
+                    <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                      Seu usuário não tem permissão para ligar ou desligar a página pública.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -1556,6 +1695,7 @@ export const PetitionDetail: React.FC = () => {
                   id="availableOnline"
                   checked={petition?.availableOnline || false}
                   onChange={handleToggleOnlineAvailability}
+                  disabled={!canPublishPetition}
                   className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <div className="flex-1">
@@ -1685,6 +1825,34 @@ export const PetitionDetail: React.FC = () => {
             </div>
 
             <div>
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Documento para Apresentação ao Setor Público</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Gere um documento formatado para impressão e apresentação institucional, com a relação das assinaturas
+                digitalizadas desta petição. O arquivo inclui nome completo, endereço e data e horário da assinatura,
+                sem exibir telefone.
+              </p>
+
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {signatures.length} assinaturas digitalizadas
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Arquivo: apresentacao-setor-publico-{petition.slug}.html
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportPublicSectorDocument}
+                  disabled={signatures.length === 0}
+                  className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <FileText size={16} />
+                  Baixar Documento
+                </button>
+              </div>
+            </div>
+
+            <div>
               <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Documento para Coleta Física</h4>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Exporte um documento em branco para coleta de assinaturas físicas.
@@ -1694,7 +1862,7 @@ export const PetitionDetail: React.FC = () => {
               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    Documento com 10 linhas em branco
+                    Documento em branco para impressão
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Arquivo: coleta-assinaturas-{petition.slug}.html
@@ -1714,7 +1882,7 @@ export const PetitionDetail: React.FC = () => {
       )}
 
       {/* Edit Signature Modal */}
-      {showEditSignature && editingSignature && (
+      {showEditSignature && editingSignature && canEditSignatures && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
@@ -1891,7 +2059,7 @@ export const PetitionDetail: React.FC = () => {
       )}
 
       {/* Add Signature Modal */}
-      {showAddSignature && (
+      {showAddSignature && canCreateManualSignature && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
@@ -2107,3 +2275,4 @@ export const PetitionDetail: React.FC = () => {
     </div>
   );
 };
+

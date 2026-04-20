@@ -1,37 +1,55 @@
 import '@testing-library/jest-dom';
+import { TextDecoder, TextEncoder } from 'util';
 
-// Setup DOM
+const createQueryBuilder = () => {
+  const chain: Record<string, jest.Mock> = {
+    select: jest.fn(() => chain),
+    insert: jest.fn(() => chain),
+    update: jest.fn(() => chain),
+    delete: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    neq: jest.fn(() => chain),
+    in: jest.fn(() => chain),
+    order: jest.fn(() => chain),
+    limit: jest.fn(() => chain),
+    maybeSingle: jest.fn(),
+    single: jest.fn(),
+  };
+
+  return chain;
+};
+
 beforeEach(() => {
   document.body.innerHTML = '';
+  jest.clearAllMocks();
 });
 
-// Mock do Supabase
 jest.mock('./lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn(),
+      getUser: jest.fn(),
       onAuthStateChange: jest.fn(),
       signInWithPassword: jest.fn(),
+      updateUser: jest.fn(),
       signOut: jest.fn(),
     },
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      neq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    })),
+    from: jest.fn(() => createQueryBuilder()),
     rpc: jest.fn(),
   },
+  createSessionSupabaseClient: jest.fn(() => ({
+    from: jest.fn(() => createQueryBuilder()),
+    rpc: jest.fn(),
+  })),
 }));
 
-// Mock do fetch para testes de API
 global.fetch = jest.fn();
 
-// Mock do window.URL para testes de download
+Object.assign(global, {
+  TextEncoder,
+  TextDecoder,
+});
+
 Object.defineProperty(window, 'URL', {
   value: {
     createObjectURL: jest.fn(() => 'mock-url'),
@@ -39,20 +57,3 @@ Object.defineProperty(window, 'URL', {
   },
   writable: true,
 });
-
-// Mock do document.createElement para testes de download
-const mockLink = {
-  click: jest.fn(),
-  setAttribute: jest.fn(),
-  style: {},
-} as any;
-
-const originalCreateElement = document.createElement;
-document.createElement = jest.fn((tagName) => {
-  if (tagName === 'a') {
-    return mockLink;
-  }
-  return originalCreateElement.call(document, tagName);
-});
-document.body.appendChild = jest.fn();
-document.body.removeChild = jest.fn();

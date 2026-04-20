@@ -1,70 +1,87 @@
 /**
- * Edge Function: Verificar se usuário é Admin
+ * Edge Function: Verificar acesso interno do usuário
  * GET /api/admin-management/check-admin
  *
- * Fluxo:
- * 1. Autentica requester
- * 2. Consulta tabela admin_users
- * 3. Retorna status de admin
- *
- * Usada pelo AuthContext para verificar permissões
+ * Compatibilidade:
+ * - O path legado é mantido
+ * - A resposta agora inclui papel e status de acesso ao painel
  */
 
-import { Context } from "https://edge.netlify.com";
 import {
-  createAdminClient,
   authenticateRequest,
-  jsonResponse
+  jsonResponse,
+  resolveAccessProfile,
+  resolveEffectivePermissions,
 } from "./utils.ts";
 
-interface CheckAdminResponse {
-  isAdmin: boolean;
-  userId?: string;
-  email?: string;
-}
-
-export default async function handler(request: Request, context: Context) {
-  // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
+export default async function handler(request: Request) {
+  if (request.method === "OPTIONS") {
     return jsonResponse({}, 204);
   }
 
-  // Apenas GET
-  if (request.method !== 'GET') {
-    return jsonResponse({ isAdmin: false }, 405);
+  if (request.method !== "GET") {
+    return jsonResponse({ canAccessPanel: false, isAdmin: false, role: null }, 405);
   }
 
   try {
-    // 1. Autenticar requester
     const authData = await authenticateRequest(request);
     if (!authData) {
-      return jsonResponse({ isAdmin: false }, 401);
+      return jsonResponse(
+        {
+          canAccessPanel: false,
+          isAdmin: false,
+          role: null,
+          reason: "UNAUTHORIZED",
+        },
+        401
+      );
     }
 
-    const userId = authData.userId;
+    const profile = await resolveAccessProfile(authData.userId, authData.email);
+    const isActive = !!profile?.isActive;
+    const role = isActive ? profile?.role || null : null;
+    const permissions = isActive
+      ? await resolveEffectivePermissions(authData.userId, authData.email)
+      : {};
 
-    // 2. Verificar se é admin
-    const supabase = createAdminClient();
-    const { data: adminData } = await supabase
-      .from('admin_users')
-      .select('id, email')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single();
-
-    // 3. Retornar resultado
-    return jsonResponse({
-      isAdmin: !!adminData,
-      userId: userId,
-      email: authData.email
-    }, 200);
-
+    return jsonResponse(
+      {
+        canAccessPanel: isActive,
+        isAdmin: role === "admin",
+        role,
+        reason: role ? undefined : profile ? "INACTIVE_PROFILE" : "PROFILE_NOT_FOUND",
+        userId: authData.userId,
+        email: authData.email,
+        permissions,
+        profile: profile
+          ? {
+              userId: profile.userId,
+              email: profile.email,
+              fullName: profile.fullName,
+              role: profile.role,
+              isActive: profile.isActive,
+              createdAt: profile.createdAt,
+              updatedAt: profile.updatedAt,
+              permissions,
+            }
+          : null,
+      },
+      200
+    );
   } catch (error) {
-    console.error('Erro ao verificar admin:', error);
-    return jsonResponse({ isAdmin: false }, 500);
+    console.error("Erro ao verificar acesso interno:", error);
+    return jsonResponse(
+      {
+        canAccessPanel: false,
+        isAdmin: false,
+        role: null,
+        reason: "INTERNAL_ERROR",
+      },
+      500
+    );
   }
 }
 
 export const config = {
-  path: "/api/admin-management/check-admin"
+  path: "/api/admin-management/check-admin",
 };

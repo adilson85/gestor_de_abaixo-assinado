@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   CheckCircle,
   FileText,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -15,6 +16,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { APP_ROLE_LABELS, KANBAN_ROUTE_SCOPES, SETTINGS_ROUTE_PERMISSION_CODES } from '../utils/access';
 import { PWANotifications } from './PWANotifications';
 import { BrandLogo } from './BrandLogo';
 
@@ -24,15 +26,26 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, appUser, can, canAny, signOut } = useAuth();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
   const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/petitions', label: 'Campanhas', icon: FileText },
-    { path: '/tasks', label: 'Tarefas', icon: CheckCircle },
-    { path: '/settings', label: 'Configurações', icon: Settings },
+    ...(can('dashboard.view', 'any') ? [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }] : []),
+    ...(can('petitions.view', 'any') ? [{ path: '/petitions', label: 'Campanhas', icon: FileText }] : []),
+    ...(KANBAN_ROUTE_SCOPES.some((scope) => can('kanban.view', scope))
+      ? [{ path: '/tasks', label: 'Tarefas', icon: CheckCircle }]
+      : []),
+    ...(can('users.view', 'any') ? [{ path: '/users', label: 'Usuários', icon: Users }] : []),
+    { path: '/account', label: 'Minha conta', icon: KeyRound },
+    ...(canAny(
+      SETTINGS_ROUTE_PERMISSION_CODES.map((code) => ({
+        code,
+        scopes: ['any'],
+      }))
+    )
+      ? [{ path: '/settings', label: 'Configurações', icon: Settings }]
+      : []),
   ];
 
   const isActive = (path: string) => {
@@ -62,10 +75,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div>
               <BrandLogo dark={theme === 'dark'} className="w-[164px]" />
               <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-blue-600 dark:text-blue-300">
-                Painel administrativo
+                Painel interno
               </p>
               <p className="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">
-                Gestão de campanhas, assinaturas e equipes.
+                Operação de campanhas, assinaturas e equipe.
               </p>
             </div>
 
@@ -120,7 +133,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   AssinaPovo Admin
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Operação das campanhas e assinaturas
+                  Operação das campanhas, assinaturas e acessos
                 </p>
               </div>
             </div>
@@ -135,7 +148,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </button>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                 <Users size={16} />
-                <span>{user?.email}</span>
+                <div className="text-right">
+                  <p className="font-medium text-gray-800 dark:text-gray-100">
+                    {appUser?.fullName || user?.email}
+                  </p>
+                  {appUser?.role ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {APP_ROLE_LABELS[appUser.role]}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               <button
                 onClick={signOut}

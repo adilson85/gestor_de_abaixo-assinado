@@ -19,9 +19,10 @@ import clsx from 'clsx';
 interface KanbanTaskCardProps {
   task: KanbanTask;
   onClick: () => void;
+  sortable?: boolean;
 }
 
-export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick }) => {
+export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick, sortable = true }) => {
   const navigate = useNavigate();
   const {
     attributes,
@@ -30,7 +31,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: !sortable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -102,7 +103,8 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
         // Efeitos de hover
         'hover:scale-[1.02] hover:-translate-y-0.5',
         // Estado de arrastar
-        isDragging && 'opacity-50 rotate-2 scale-105 shadow-2xl'
+        isDragging && 'opacity-50 rotate-2 scale-105 shadow-2xl',
+        !sortable && 'cursor-default'
       )}
       role="button"
       tabIndex={0}
@@ -121,15 +123,17 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
         }
       }}
     >
-      <div className="absolute top-2 right-2 w-6 h-6 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-all duration-200 z-30 pointer-events-none">
-        <div className="w-full h-full bg-blue-100 dark:bg-blue-800 rounded-md shadow-sm hover:shadow-md flex items-center justify-center transition-all duration-200">
-          <div className="flex flex-col gap-0.5">
-            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
-            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
-            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+      {sortable ? (
+        <div className="absolute top-2 right-2 w-6 h-6 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-all duration-200 z-30 pointer-events-none">
+          <div className="w-full h-full bg-blue-100 dark:bg-blue-800 rounded-md shadow-sm hover:shadow-md flex items-center justify-center transition-all duration-200">
+            <div className="flex flex-col gap-0.5">
+              <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+              <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+              <div className="w-1 h-1 bg-blue-500 dark:bg-blue-300 rounded-full"></div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
       {/* Priority and Labels */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -218,9 +222,9 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, onClick })
                   <div
                     key={assignee.id}
                     className="w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white dark:border-gray-700 shadow-sm"
-                    title={assignee.user?.email}
+                    title={assignee.user?.name || assignee.user?.email}
                   >
-                    {assignee.user?.email?.charAt(0).toUpperCase()}
+                    {(assignee.user?.name || assignee.user?.email || '?').charAt(0).toUpperCase()}
                   </div>
                 ))}
                 {task.assignees.length > 3 && (

@@ -2,238 +2,202 @@
 
 Sistema web para gestão e digitalização de abaixo-assinados físicos, desenvolvido com React, TypeScript, Supabase e Tailwind CSS.
 
-## 🚀 Funcionalidades
+## Visão geral
 
-### ✅ Implementadas
-- **Autenticação completa** com Supabase Auth
-- **CRUD de abaixo-assinados** com validações robustas
-- **Digitalização de assinaturas** com validação de telefone WhatsApp
-- **Upload de imagens** dos abaixo-assinados físicos
-- **Busca e filtros** por nome, telefone, cidade, estado
-- **Paginação** para listas grandes
-- **Exportação CSV** das assinaturas
-- **Integração com ViaCEP** para preenchimento automático de endereços
-- **Dashboard** com estatísticas em tempo real
-- **Interface responsiva** e moderna
-- **Testes automatizados** com Jest e Testing Library
+- Painel interno com autenticação via Supabase Auth
+- Gestão de campanhas, assinaturas e recursos públicos
+- Quadro Kanban operacional com restrição por escopo
+- Área dedicada de `Usuários` para equipe, permissões e senhas temporárias
+- Área de `Configurações` focada em sistema, auditoria, backup e ações globais
+- Fluxo público de assinatura online preservado
 
-### 🔄 Em Desenvolvimento
-- Relatórios visuais e estatísticas avançadas
-- Cache e otimizações de performance
-- Monitoramento de erros e logs de auditoria
-- Funcionalidades PWA para uso offline
+## Stack
 
-## 🛠️ Tecnologias
+- React 18 + TypeScript + Vite
+- Tailwind CSS
+- Supabase (PostgreSQL + Auth + Storage)
+- Netlify Edge Functions
+- Jest + Testing Library
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **Testes**: Jest + Testing Library
-- **Ícones**: Lucide React
-- **Validação**: Validações customizadas
-- **Upload**: React Dropzone
+## Instalação
 
-## 📋 Pré-requisitos
+1. Clone o repositório
 
-- Node.js 18+ 
-- npm ou yarn
-- Conta no Supabase
-
-## 🚀 Instalação
-
-1. **Clone o repositório**
 ```bash
 git clone <url-do-repositorio>
 cd gestor_de_abaixo-assinado-main
 ```
 
-2. **Instale as dependências**
+2. Instale as dependências
+
 ```bash
 npm install
 ```
 
-3. **Configure as variáveis de ambiente**
-O arquivo `.env.local` já foi criado automaticamente com as credenciais do Supabase. Se necessário, você pode recriar executando:
-```bash
-node setup-supabase.js
-```
+3. Configure as variáveis de ambiente
 
-**Credenciais configuradas:**
-- URL: https://rncowiwstzumxruaojvq.supabase.co
-- Chave anônima: Configurada automaticamente
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-4. **Execute as migrações do banco**
-No painel do Supabase, execute as migrações SQL encontradas em `supabase/migrations/`:
-- `20250915132944_twilight_sea.sql` - Tabelas principais
-- `20250917051108_broken_resonance.sql` - Tabela de administradores
-- `20250917051357_broad_frost.sql` - Funções auxiliares
-- `20250120000000_add_image_url.sql` - Campo de imagem
+4. Aplique as migrations do Supabase em ordem de timestamp
 
-5. **Inicie o servidor de desenvolvimento**
+- Para ambientes novos: aplique todas as migrations em `supabase/migrations/`
+- Para ambientes já existentes: esta revisão depende destas migrations:
+  - `20260420000000_create_app_users_and_secure_internal_access.sql`
+  - `20260420000001_cleanup_legacy_rls_policies.sql`
+  - `20260420000002_add_granular_permissions_and_system_access.sql`
+  - `20260420000003_finalize_app_user_source_of_truth.sql`
+
+5. Inicie o projeto
+
 ```bash
 npm run dev
 ```
 
-6. **Acesse a aplicação**
-Abra [http://localhost:5173](http://localhost:5173) no seu navegador.
+## Arquitetura de acesso interno
 
-## 🧪 Testes
+O painel usa `public.app_users` como fonte de verdade para identidade interna e autorização. O papel-base continua existindo, mas usuários não-admin agora recebem permissões explícitas por capacidade e escopo.
 
-```bash
-# Executar todos os testes
-npm test
+### Papéis
 
-# Executar testes em modo watch
-npm run test:watch
+- `admin`: acesso total ao painel, gestão de usuários, import/export, auditoria e ações destrutivas
+- `operator`: papel-base operacional; o acesso final depende da matriz de permissões atribuída
 
-# Executar testes com cobertura
-npm run test:coverage
-```
+### Áreas do painel
 
-## 📦 Scripts Disponíveis
+- `Usuários`: equipe ativa, criação/invite, edição de nome, papel-base, permissões, escopo, senha temporária e ativação/desativação
+- `Minha conta`: dados do usuário logado e troca da própria senha
+- `Configurações`: prazos automáticos do Kanban, backup/exportação/importação, auditoria, ambiente e limpeza global
 
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Cria build de produção
-- `npm run preview` - Preview do build de produção
-- `npm run lint` - Executa o linter
-- `npm test` - Executa os testes
-- `npm run test:watch` - Executa testes em modo watch
-- `npm run test:coverage` - Executa testes com cobertura
+### Regras importantes
 
-## 🏗️ Estrutura do Projeto
+- Usuário autenticado sem perfil ativo em `app_users` não entra no painel
+- O frontend não deve gravar diretamente em tabelas sensíveis de acesso
+- `admin_users` passa a ser apenas histórico arquivado e não participa mais da autorização
+- O fluxo público de assinatura anônima continua separado das permissões internas
 
-```
-src/
-├── components/          # Componentes reutilizáveis
-│   ├── Layout.tsx      # Layout principal
-│   ├── ImageUpload.tsx # Componente de upload de imagens
-│   ├── Pagination.tsx  # Componente de paginação
-│   ├── StatsCard.tsx   # Card de estatísticas
-│   └── ...
-├── contexts/           # Contextos React
-│   └── AuthContext.tsx # Contexto de autenticação
-├── lib/               # Configurações de bibliotecas
-│   └── supabase.ts    # Cliente Supabase
-├── pages/             # Páginas da aplicação
-│   ├── Dashboard.tsx  # Dashboard principal
-│   ├── CreatePetition.tsx # Criação de abaixo-assinado
-│   ├── PetitionDetail.tsx # Detalhes do abaixo-assinado
-│   └── ...
-├── types/             # Definições de tipos TypeScript
-│   └── index.ts       # Tipos principais
-├── utils/             # Utilitários
-│   ├── validation.ts  # Funções de validação
-│   ├── supabase-storage.ts # Operações do banco
-│   ├── image-storage.ts # Gerenciamento de imagens
-│   ├── export.ts      # Exportação de dados
-│   └── cep.ts         # Integração com ViaCEP
-└── __tests__/         # Testes
-    ├── components/    # Testes de componentes
-    └── utils/         # Testes de utilitários
-```
+## Matriz de permissões
 
-## 🔐 Configuração de Usuários Administradores
-
-Para criar usuários administradores, execute no SQL Editor do Supabase:
-
-```sql
--- Criar usuário administrador
-INSERT INTO admin_users (user_id) 
-VALUES ('uuid-do-usuario-do-supabase-auth');
-```
-
-## 📊 Funcionalidades Detalhadas
+As permissões são persistidas em `public.app_permissions` e `public.app_user_permissions`.
 
 ### Dashboard
-- Estatísticas em tempo real
-- Lista de abaixo-assinados recentes
-- Acesso rápido às funcionalidades
 
-### Gestão de Abaixo-Assinados
-- Criação com upload de imagem
-- Edição de informações
-- Visualização de detalhes
-- Exclusão com limpeza de dados
+- `dashboard.view`
 
-### Digitalização de Assinaturas
-- Validação de telefone WhatsApp
-- Preenchimento automático por CEP
-- Verificação de duplicatas
-- Busca e filtros avançados
+### Campanhas
 
-### Exportação
-- Exportação em CSV
-- Dados completos das assinaturas
-- Formatação adequada para análise
+- `petitions.view`
+- `petitions.create`
+- `petitions.edit`
+- `petitions.publish`
+- `petitions.delete`
+- `petition_resources.manage`
 
-## 🔒 Segurança
+### Assinaturas
 
-- **Row Level Security (RLS)** no Supabase
-- **Autenticação obrigatória** para todas as rotas
-- **Validação de dados** no frontend e backend
-- **Políticas de acesso** configuradas
-- **Sanitização** de entradas do usuário
+- `signatures.view`
+- `signatures.create_manual`
+- `signatures.edit`
+- `signatures.delete`
+- `signatures.export`
+- `signatures.message_status`
 
-## 🚀 Deploy
+### Kanban
 
-### Vercel (Recomendado)
-1. Conecte seu repositório ao Vercel
-2. Configure as variáveis de ambiente
-3. Deploy automático a cada push
+- `kanban.view`
+- `kanban.create`
+- `kanban.edit`
+- `kanban.move`
+- `kanban.archive`
+- `kanban.delete`
+- `kanban.assign_users`
+- `kanban.manage_labels`
+- `kanban.comment`
+- `kanban.attachment`
+- `kanban.manage_columns`
+- `kanban.manage_deadlines`
 
-### Netlify
-1. Conecte seu repositório ao Netlify
-2. Configure as variáveis de ambiente
-3. Deploy automático a cada push
+### Usuários
 
-### Build Manual
-```bash
-npm run build
-# Os arquivos estarão em dist/
+- `users.view`
+- `users.create`
+- `users.edit_profile`
+- `users.edit_permissions`
+- `users.reset_password`
+- `users.deactivate`
+
+### Sistema
+
+- `settings.backup_export`
+- `settings.backup_import`
+- `settings.audit_view`
+- `settings.wipe_data`
+
+### Escopos suportados
+
+- `all`: acesso total ao módulo ou ação
+- `assigned`: somente itens atribuídos ao usuário
+- `own`: somente itens criados pelo usuário
+- `none`: sem acesso
+
+## Gestão de usuários
+
+A criação e atualização de usuários internos acontece pela tela `Usuários`, usando as Edge Functions em `netlify/edge-functions/admin-management/*`.
+
+Essas funções:
+
+- criam o usuário em `auth.users` quando ele ainda não existe
+- vinculam ou atualizam o registro em `public.app_users`
+- aplicam a matriz de permissões em `public.app_user_permissions`
+- permitem gerar senha temporária
+- permitem ativação e desativação seguras
+- registram auditoria em `admin_audit_log`
+
+Não use `INSERT` manual em `admin_users` como fluxo principal.
+
+## Segurança
+
+- RLS aplicado nas tabelas internas
+- Helpers SQL de papel/permissão, incluindo `get_my_role`, `get_my_permissions`, `has_permission` e `can_access_kanban_task`
+- Autorização validada no backend, nas Edge Functions e na UI
+- Restrição real de escopo no Kanban para usuários com acesso somente a cards atribuídos ou próprios
+- Auditoria de ações administrativas
+
+## Scripts
+
+- `npm run dev` - inicia o servidor de desenvolvimento
+- `npm run build` - gera o build de produção
+- `npm run preview` - abre o preview do build
+- `npm run lint` - executa o linter
+- `npm test -- --runInBand` - executa a suíte de testes usada nesta revisão
+
+## Estrutura principal
+
+```text
+src/
+  components/
+  contexts/
+  lib/
+  pages/
+  types/
+  utils/
+netlify/
+  edge-functions/
+supabase/
+  migrations/
 ```
 
-## 🤝 Contribuição
+## Deploy
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+Antes de publicar:
 
-## 📝 Licença
+1. aplique as migrations pendentes no Supabase
+2. valide as Edge Functions com as variáveis de ambiente corretas
+3. rode `npm test -- --runInBand`
+4. rode `npm run build`
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+## Histórico legado
 
-## 🆘 Suporte
-
-Se você encontrar algum problema ou tiver dúvidas:
-
-1. Verifique se seguiu todos os passos de instalação
-2. Confirme se as variáveis de ambiente estão corretas
-3. Verifique se as migrações foram executadas
-4. Abra uma issue no GitHub
-
-## 🎯 Roadmap
-
-- [ ] Relatórios visuais com gráficos
-- [ ] Cache e otimizações de performance
-- [ ] Monitoramento de erros
-- [ ] Funcionalidades PWA
-- [ ] Backup automático
-- [ ] Notificações push
-- [ ] API REST completa
-- [ ] Integração com WhatsApp Business
-- [ ] Assinatura digital
-- [ ] Relatórios em PDF
-
-## 📈 Métricas de Qualidade
-
-- **Cobertura de Testes**: 70%+
-- **Performance**: Lighthouse Score 90+
-- **Acessibilidade**: WCAG 2.1 AA
-- **SEO**: Otimizado para motores de busca
-- **Segurança**: A+ no Security Headers
-
----
-
-Desenvolvido com ❤️ para facilitar a gestão de abaixo-assinados físicos.
+Se o projeto já tinha administradores antigos em `admin_users`, as migrations de `20260420000000` até `20260420000003` fazem o backfill final para `app_users` e retiram o legado da cadeia de autorização.

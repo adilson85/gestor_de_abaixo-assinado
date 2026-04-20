@@ -43,6 +43,92 @@ export interface PetitionResource {
   createdAt: Date;
 }
 
+export type AppRole = 'admin' | 'operator';
+export type PermissionScope = 'none' | 'own' | 'assigned' | 'all';
+export type AppPermissionCode =
+  | 'dashboard.view'
+  | 'petitions.view'
+  | 'petitions.create'
+  | 'petitions.edit'
+  | 'petitions.publish'
+  | 'petitions.delete'
+  | 'signatures.view'
+  | 'signatures.create_manual'
+  | 'signatures.edit'
+  | 'signatures.delete'
+  | 'signatures.export'
+  | 'signatures.message_status'
+  | 'petition_resources.manage'
+  | 'kanban.view'
+  | 'kanban.create'
+  | 'kanban.edit'
+  | 'kanban.move'
+  | 'kanban.archive'
+  | 'kanban.delete'
+  | 'kanban.assign_users'
+  | 'kanban.manage_labels'
+  | 'kanban.comment'
+  | 'kanban.attachment'
+  | 'kanban.manage_columns'
+  | 'kanban.manage_deadlines'
+  | 'users.view'
+  | 'users.create'
+  | 'users.edit_profile'
+  | 'users.edit_permissions'
+  | 'users.reset_password'
+  | 'users.deactivate'
+  | 'settings.backup_export'
+  | 'settings.backup_import'
+  | 'settings.audit_view'
+  | 'settings.wipe_data';
+
+export type AppPermissionMap = Record<AppPermissionCode, PermissionScope>;
+
+export interface AppPermissionDefinition {
+  code: AppPermissionCode;
+  module: 'dashboard' | 'petitions' | 'signatures' | 'kanban' | 'users' | 'settings';
+  label: string;
+  description: string;
+  allowedScopes: PermissionScope[];
+  defaultOperatorScope: PermissionScope;
+}
+
+export interface AppUserPermission {
+  userId: string;
+  permissionCode: AppPermissionCode;
+  scope: PermissionScope;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface AdminAuditLogEntry {
+  id: string;
+  actionType: string;
+  actorId: string;
+  targetEmail: string;
+  details?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+export interface AppUser {
+  userId: string;
+  email: string;
+  fullName?: string;
+  role: AppRole;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  permissions?: AppPermissionMap;
+}
+
+export interface GeneratedCredential {
+  email: string;
+  password: string;
+  title: string;
+  description: string;
+}
+
 // Kanban Types
 export interface KanbanBoard {
   id: string;
@@ -101,6 +187,7 @@ export interface KanbanTaskAssignee {
   user?: {
     id: string;
     email: string;
+    name?: string;
   };
 }
 
@@ -159,6 +246,7 @@ export interface KanbanComment {
   author?: {
     id: string;
     email: string;
+    name?: string;
   };
 }
 
@@ -172,12 +260,6 @@ export interface KanbanActivity {
   actor?: {
     id: string;
     email: string;
+    name?: string;
   };
-}
-
-export interface AdminUser {
-  id: string;
-  userId: string;
-  email: string;
-  createdAt: Date;
 }

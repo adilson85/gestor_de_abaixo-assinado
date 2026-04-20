@@ -1,7 +1,12 @@
 import React from 'react';
 import { KanbanBoardComponent } from '../components/KanbanBoard';
+import { useAuth } from '../contexts/AuthContext';
+import { getKanbanViewScopeLabel } from '../utils/access';
 
 export const Tasks: React.FC = () => {
+  const { permissions, role } = useAuth();
+  const kanbanScopeLabel = getKanbanViewScopeLabel(permissions, role);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -15,6 +20,9 @@ export const Tasks: React.FC = () => {
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Use o quadro para acompanhar prazos, distribuir responsabilidades e manter cada mobilização avançando com clareza.
           </p>
+          <p className="mt-3 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            {kanbanScopeLabel}
+          </p>
         </div>
       </div>
 
@@ -22,13 +30,13 @@ export const Tasks: React.FC = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm font-semibold text-slate-950 dark:text-white">Fluxo visível</p>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Entenda em qual etapa cada campanha está e o que precisa acontecer em seguida.
+            Entenda em qual etapa cada campanha visível para o seu acesso está e o que precisa acontecer em seguida.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm font-semibold text-slate-950 dark:text-white">Ação rápida</p>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Arraste tarefas entre colunas, refine prioridades e mantenha a operação atualizada no mesmo lugar.
+            Movimente tarefas quando sua permissão permitir e mantenha a operação atualizada no mesmo lugar.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">

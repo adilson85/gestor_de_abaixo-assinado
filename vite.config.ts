@@ -25,10 +25,6 @@ export default defineConfig(({ mode }) => {
               return undefined;
             }
 
-            if (id.includes('react') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-
             if (id.includes('@supabase')) {
               return 'supabase-vendor';
             }
@@ -41,7 +37,7 @@ export default defineConfig(({ mode }) => {
               return 'maps-vendor';
             }
 
-            return 'vendor';
+            return undefined;
           },
         },
       }

@@ -6,31 +6,36 @@ import { useTheme } from '../contexts/ThemeContext';
 import { BrandLogo } from '../components/BrandLogo';
 
 export const Login: React.FC = () => {
-  const { signIn, user, loading, isAdmin } = useAuth();
+  const { signIn, user, loading, canAccessPanel } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && !loading && isAdmin) {
-      const next = searchParams.get('next') || '/dashboard';
+    if (user && !loading && canAccessPanel) {
+      const next = searchParams.get('next') || '/';
       navigate(next, { replace: true });
+      return;
     }
-  }, [user, loading, isAdmin, navigate, searchParams]);
+
+    if (user && !loading && !canAccessPanel) {
+      setError('Sua conta está autenticada, mas ainda não possui acesso ativo ao painel.');
+    }
+  }, [user, loading, canAccessPanel, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     if (!email || !password) {
       setError('Por favor, preencha todos os campos.');
-      setIsLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
@@ -40,19 +45,16 @@ export const Login: React.FC = () => {
       if (signInError.message.includes('Invalid login credentials')) {
         setError('Email ou senha incorretos.');
       } else if (signInError.message.includes('Email not confirmed')) {
-        setError('Email nao confirmado. Verifique sua caixa de entrada.');
+        setError('Email não confirmado. Verifique sua caixa de entrada.');
       } else {
         setError('Erro ao fazer login. Tente novamente.');
       }
-    } else {
-      const next = searchParams.get('next') || '/dashboard';
-      navigate(next, { replace: true });
     }
 
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
@@ -79,7 +81,7 @@ export const Login: React.FC = () => {
 
         <div className="mt-8 text-center">
           <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
-            Painel administrativo
+            Painel interno
           </span>
         </div>
 
@@ -87,7 +89,7 @@ export const Login: React.FC = () => {
           Acesse o painel do AssinaPovo
         </h2>
         <p className="mt-3 text-center text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Crie campanhas, acompanhe assinaturas e organize mobilizações com a mesma identidade do AssinaPovo público.
+          Entre com uma conta autorizada para operar campanhas, assinaturas e tarefas da equipe.
         </p>
       </div>
 
@@ -98,7 +100,7 @@ export const Login: React.FC = () => {
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Entrar no sistema</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Use suas credenciais administrativas para acessar campanhas, equipe e relatórios.
+              Use suas credenciais para validar seu acesso ao painel interno.
             </p>
           </div>
 
@@ -162,10 +164,10 @@ export const Login: React.FC = () => {
             <div>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="flex w-full justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-slate-900"
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
                     Entrando...
@@ -205,7 +207,7 @@ export const Login: React.FC = () => {
             </div>
 
             <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-              Uso restrito a administradores autorizados.
+              Uso restrito à equipe autorizada.
             </p>
           </div>
         </div>

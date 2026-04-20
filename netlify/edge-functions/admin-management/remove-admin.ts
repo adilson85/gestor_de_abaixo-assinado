@@ -1,151 +1,170 @@
 /**
- * Edge Function: Remover Administrador
+ * Edge Function: Desativar usuário interno
  * POST /api/admin-management/remove-admin
  *
- * Fluxo:
- * 1. Autentica requester
- * 2. Verifica se requester é admin
- * 3. Busca dados do admin a ser removido
- * 4. Verifica se não é auto-remoção
- * 5. Remove da tabela admin_users
- * 6. Registra auditoria
- * 7. Retorna sucesso
+ * Compatibilidade:
+ * - O path legado é mantido
+ * - A operação agora desativa usuários do painel, não apaga auth.users
  */
 
-import { Context } from "https://edge.netlify.com";
 import {
-  createAdminClient,
   authenticateRequest,
-  isUserAdmin,
+  createAdminClient,
+  hasUserPermission,
+  jsonResponse,
   logAdminAction,
-  jsonResponse
+  resolveAccessProfile,
 } from "./utils.ts";
 
-interface RemoveAdminRequest {
-  adminId: string;
+interface DeactivateUserRequest {
+  userId?: string;
+  adminId?: string;
 }
 
-interface RemoveAdminResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-  code?: string;
-}
-
-export default async function handler(request: Request, context: Context) {
-  // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
+export default async function handler(request: Request) {
+  if (request.method === "OPTIONS") {
     return jsonResponse({}, 204);
   }
 
-  // Apenas POST
-  if (request.method !== 'POST') {
-    return jsonResponse({ success: false, error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }, 405);
+  if (request.method !== "POST") {
+    return jsonResponse({ success: false, error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }, 405);
   }
 
   try {
-    // 1. Parse request body
-    const body: RemoveAdminRequest = await request.json();
-    const { adminId } = body;
+    const body: DeactivateUserRequest = await request.json();
+    const targetUserId = body.userId || body.adminId;
 
-    if (!adminId) {
-      return jsonResponse({
-        success: false,
-        error: 'adminId é obrigatório',
-        code: 'MISSING_ADMIN_ID'
-      }, 400);
+    if (!targetUserId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "userId é obrigatório",
+          code: "MISSING_USER_ID",
+        },
+        400
+      );
     }
 
-    // 2. Autenticar requester
     const authData = await authenticateRequest(request);
     if (!authData) {
-      return jsonResponse({
-        success: false,
-        error: 'Não autenticado',
-        code: 'UNAUTHORIZED'
-      }, 401);
+      return jsonResponse(
+        {
+          success: false,
+          error: "Não autenticado",
+          code: "UNAUTHORIZED",
+        },
+        401
+      );
     }
 
-    const requesterId = authData.userId;
-
-    // 3. Verificar se requester é admin
-    const requesterIsAdmin = await isUserAdmin(requesterId);
-    if (!requesterIsAdmin) {
-      return jsonResponse({
-        success: false,
-        error: 'Acesso negado - apenas administradores podem remover outros admins',
-        code: 'FORBIDDEN'
-      }, 403);
-    }
-
-    // 4. Buscar dados do admin a ser removido
-    const supabase = createAdminClient();
-    const { data: targetAdmin, error: fetchError } = await supabase
-      .from('admin_users')
-      .select('user_id, email')
-      .eq('id', adminId)
-      .single();
-
-    if (fetchError || !targetAdmin) {
-      return jsonResponse({
-        success: false,
-        error: 'Administrador não encontrado',
-        code: 'NOT_FOUND'
-      }, 404);
-    }
-
-    // 5. Verificar auto-remoção
-    if (targetAdmin.user_id === requesterId) {
-      return jsonResponse({
-        success: false,
-        error: 'Você não pode remover a si mesmo como administrador',
-        code: 'SELF_REMOVAL'
-      }, 403);
-    }
-
-    // 6. Remover da tabela admin_users
-    const { error: deleteError } = await supabase
-      .from('admin_users')
-      .delete()
-      .eq('id', adminId);
-
-    if (deleteError) {
-      console.error('Erro ao deletar admin:', deleteError);
-      return jsonResponse({
-        success: false,
-        error: 'Erro ao remover administrador',
-        code: 'DB_DELETE_ERROR',
-        details: deleteError.message
-      }, 500);
-    }
-
-    // 7. Registrar auditoria
-    await logAdminAction(
-      'ADMIN_REMOVED',
-      requesterId,
-      targetAdmin.email,
-      { adminId, targetUserId: targetAdmin.user_id }
+    const canDeactivateUsers = await hasUserPermission(
+      authData.userId,
+      "users.deactivate",
+      "all",
+      authData.email
     );
+    if (!canDeactivateUsers) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Acesso negado - voce nao possui permissao para desativar usuarios.",
+          code: "FORBIDDEN",
+        },
+        403
+      );
+    }
 
-    console.log(`Admin removido com sucesso: ${targetAdmin.email} (${adminId})`);
+    if (targetUserId === authData.userId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Você não pode desativar a si mesmo.",
+          code: "SELF_DEACTIVATION",
+        },
+        403
+      );
+    }
 
-    // 8. Retornar sucesso
-    return jsonResponse({
-      success: true,
-      message: 'Administrador removido com sucesso'
-    }, 200);
+    const supabase = createAdminClient();
+    const targetProfile = await resolveAccessProfile(targetUserId);
 
+    if (!targetProfile) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Usuário interno não encontrado.",
+          code: "NOT_FOUND",
+        },
+        404
+      );
+    }
+
+    if (targetProfile.role === "admin") {
+      const { count, error: countError } = await supabase
+        .from("app_users")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "admin")
+        .eq("is_active", true);
+
+      if (countError) {
+        console.error("Erro ao contar administradores ativos:", countError);
+      } else if ((count || 0) <= 1) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "É necessário manter pelo menos um administrador ativo no painel.",
+            code: "LAST_ADMIN",
+          },
+          409
+        );
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("app_users")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", targetUserId);
+
+    if (updateError) {
+      console.error("Erro ao desativar usuário interno:", updateError);
+      return jsonResponse(
+        {
+          success: false,
+          error: "Erro ao desativar o usuário.",
+          code: "PROFILE_DEACTIVATE_ERROR",
+        },
+        500
+      );
+    }
+
+    await logAdminAction("USER_DEACTIVATED", authData.userId, targetProfile.email, {
+      targetUserId,
+      previousRole: targetProfile.role,
+    });
+
+    return jsonResponse(
+      {
+        success: true,
+        message: "Usuário desativado com sucesso.",
+      },
+      200
+    );
   } catch (error) {
-    console.error('Erro inesperado em remove-admin:', error);
-    return jsonResponse({
-      success: false,
-      error: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR',
-      details: error instanceof Error ? error.message : String(error)
-    }, 500);
+    console.error("Erro inesperado em remove-admin:", error);
+    return jsonResponse(
+      {
+        success: false,
+        error: "Erro interno do servidor",
+        code: "INTERNAL_ERROR",
+      },
+      500
+    );
   }
 }
 
 export const config = {
-  path: "/api/admin-management/remove-admin"
+  path: "/api/admin-management/remove-admin",
 };
