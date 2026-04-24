@@ -177,7 +177,7 @@ BEGIN
     INTO explicit_scope
     FROM public.app_user_permissions
     WHERE user_id = target_user_id
-      AND permission_code = get_permission_scope.permission_code;
+      AND app_user_permissions.permission_code = get_permission_scope.permission_code;
 
     IF explicit_scope IS NOT NULL THEN
         RETURN explicit_scope;
