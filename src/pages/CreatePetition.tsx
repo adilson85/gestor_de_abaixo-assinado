@@ -7,23 +7,41 @@ import { ImageUpload } from '../components/ImageUpload';
 import { deleteImage, uploadImage } from '../utils/image-storage';
 import { getPublicPetitionUrl } from '../utils/public-url';
 import { getPublicationChecklist, isPublicationReady, validatePetitionSlug } from '../utils/publication-readiness';
+import { clearFormDraft, getFormDraft, setFormDraft } from '../utils/form-drafts';
+
+interface CreatePetitionDraft {
+  name: string;
+  slug: string;
+  slugEdited: boolean;
+  description: string;
+  location: string;
+  collectionDate: string;
+  responsible: string;
+  signatureGoal: string;
+  availableOnline: boolean;
+  imageFile: File | null;
+  imagePreview?: string;
+}
+
+const CREATE_PETITION_DRAFT_KEY = 'admin:create-petition:draft';
 
 export const CreatePetition: React.FC = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugEdited, setSlugEdited] = useState(false);
+  const restoredDraft = getFormDraft<CreatePetitionDraft>(CREATE_PETITION_DRAFT_KEY);
+  const [name, setName] = useState(restoredDraft?.name || '');
+  const [slug, setSlug] = useState(restoredDraft?.slug || '');
+  const [slugEdited, setSlugEdited] = useState(restoredDraft?.slugEdited || false);
   const [existingSlugs, setExistingSlugs] = useState<string[]>([]);
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [collectionDate, setCollectionDate] = useState('');
-  const [responsible, setResponsible] = useState('');
-  const [signatureGoal, setSignatureGoal] = useState('');
-  const [availableOnline, setAvailableOnline] = useState(false);
+  const [description, setDescription] = useState(restoredDraft?.description || '');
+  const [location, setLocation] = useState(restoredDraft?.location || '');
+  const [collectionDate, setCollectionDate] = useState(restoredDraft?.collectionDate || '');
+  const [responsible, setResponsible] = useState(restoredDraft?.responsible || '');
+  const [signatureGoal, setSignatureGoal] = useState(restoredDraft?.signatureGoal || '');
+  const [availableOnline, setAvailableOnline] = useState(restoredDraft?.availableOnline || false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
+  const [imageFile, setImageFile] = useState<File | null>(restoredDraft?.imageFile || null);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(restoredDraft?.imagePreview);
   const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
@@ -34,6 +52,34 @@ export const CreatePetition: React.FC = () => {
 
     loadExistingSlugs();
   }, []);
+
+  useEffect(() => {
+    setFormDraft<CreatePetitionDraft>(CREATE_PETITION_DRAFT_KEY, {
+      name,
+      slug,
+      slugEdited,
+      description,
+      location,
+      collectionDate,
+      responsible,
+      signatureGoal,
+      availableOnline,
+      imageFile,
+      imagePreview,
+    });
+  }, [
+    name,
+    slug,
+    slugEdited,
+    description,
+    location,
+    collectionDate,
+    responsible,
+    signatureGoal,
+    availableOnline,
+    imageFile,
+    imagePreview,
+  ]);
 
   const handleImageUpload = (file: File) => {
     setImageFile(file);
@@ -150,6 +196,7 @@ export const CreatePetition: React.FC = () => {
       });
 
       if (savedPetition) {
+        clearFormDraft(CREATE_PETITION_DRAFT_KEY);
         navigate('/petitions');
         return;
       }

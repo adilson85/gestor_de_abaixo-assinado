@@ -54,17 +54,66 @@ import { uploadImage, deleteImage } from '../utils/image-storage';
 import { getPublicPetitionUrl } from '../utils/public-url';
 import { getPublicationChecklist, isPublicationReady } from '../utils/publication-readiness';
 import { useAuth } from '../contexts/AuthContext';
+import { clearFormDraft, getFormDraft, setFormDraft } from '../utils/form-drafts';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+
+interface NewSignatureDraft {
+  showAddSignature: boolean;
+  newSignature: {
+    name: string;
+    phone: string;
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  addressInput: string;
+}
+
+interface ResourceDraft {
+  title: string;
+  url: string;
+  type: 'youtube' | 'drive' | 'link';
+}
+
+interface PetitionSettingsDraft {
+  isEditing: boolean;
+  editName: string;
+  editDescription: string;
+  editLocation: string;
+  editCollectionDate: string;
+  editResponsible: string;
+  editSignatureGoal: string;
+  editImageUrl?: string;
+  editImageFile: File | null;
+  imagePreview?: string;
+}
+
+const EMPTY_NEW_SIGNATURE: NewSignatureDraft['newSignature'] = {
+  name: '',
+  phone: '',
+  street: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  zipCode: '',
+};
+
+const getPetitionDraftKey = (petitionId: string, scope: 'signature' | 'resources' | 'settings') =>
+  `admin:petition:${petitionId}:${scope}:draft`;
 
 export const PetitionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { can } = useAuth();
+  const restoredSignatureDraft = id ? getFormDraft<NewSignatureDraft>(getPetitionDraftKey(id, 'signature')) : null;
+  const restoredResourceDraft = id ? getFormDraft<ResourceDraft>(getPetitionDraftKey(id, 'resources')) : null;
   const [petition, setPetition] = useState<Petition | null>(null);
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [activeTab, setActiveTab] = useState<'signatures' | 'settings' | 'export' | 'links'>('signatures');
-  const [showAddSignature, setShowAddSignature] = useState(false);
+  const [showAddSignature, setShowAddSignature] = useState(restoredSignatureDraft?.showAddSignature || false);
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
@@ -88,15 +137,7 @@ export const PetitionDetail: React.FC = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // New signature form state
-  const [newSignature, setNewSignature] = useState({
-    name: '',
-    phone: '',
-    street: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zipCode: ''
-  });
+  const [newSignature, setNewSignature] = useState(restoredSignatureDraft?.newSignature || EMPTY_NEW_SIGNATURE);
   const [signatureErrors, setSignatureErrors] = useState<{ [key: string]: string }>({});
   const [editingSignatureId, setEditingSignatureId] = useState<string | null>(null);
   const [editingSignatureName, setEditingSignatureName] = useState<string>('');
@@ -104,13 +145,15 @@ export const PetitionDetail: React.FC = () => {
   const [editingSignature, setEditingSignature] = useState<Signature | null>(null);
   const [editSignatureErrors, setEditSignatureErrors] = useState<{ [key: string]: string }>({});
   const [deletingSignatureId, setDeletingSignatureId] = useState<string | null>(null);
-  const [addressInput, setAddressInput] = useState('');
+  const [addressInput, setAddressInput] = useState(restoredSignatureDraft?.addressInput || '');
 
   // Links
   const [resources, setResources] = useState<PetitionResource[]>([]);
-  const [newResourceTitle, setNewResourceTitle] = useState('');
-  const [newResourceUrl, setNewResourceUrl] = useState('');
-  const [newResourceType, setNewResourceType] = useState<'youtube' | 'drive' | 'link'>('link');
+  const [newResourceTitle, setNewResourceTitle] = useState(restoredResourceDraft?.title || '');
+  const [newResourceUrl, setNewResourceUrl] = useState(restoredResourceDraft?.url || '');
+  const [newResourceType, setNewResourceType] = useState<'youtube' | 'drive' | 'link'>(
+    restoredResourceDraft?.type || 'link'
+  );
   const [resourceError, setResourceError] = useState<string>('');
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [hasTask, setHasTask] = useState<boolean | null>(null);
@@ -141,6 +184,27 @@ export const PetitionDetail: React.FC = () => {
     }, 3500);
   };
 
+  const resetPetitionSettingsForm = () => {
+    if (!petition) {
+      setIsEditing(false);
+      return;
+    }
+
+    setEditName(petition.name);
+    setEditDescription(petition.description || '');
+    setEditLocation(petition.location || '');
+    setEditCollectionDate(petition.collectionDate ? petition.collectionDate.toISOString().split('T')[0] : '');
+    setEditResponsible(petition.responsible || '');
+    setEditSignatureGoal(petition.signatureGoal ? String(petition.signatureGoal) : '');
+    setEditSignatureGoalError('');
+    setEditImageUrl(petition.imageUrl);
+    setEditImageFile(null);
+    setImagePreview(petition.imageUrl);
+    setUploadError('');
+    setIsEditing(false);
+    clearFormDraft(getPetitionDraftKey(petition.id, 'settings'));
+  };
+
   const handleCopyToClipboard = async (text: string, successMessage: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -164,15 +228,23 @@ export const PetitionDetail: React.FC = () => {
         }
         
         setPetition(currentPetition);
-        setEditName(currentPetition.name);
-        setEditDescription(currentPetition.description || '');
-        setEditLocation(currentPetition.location || '');
-        setEditCollectionDate(currentPetition.collectionDate ? currentPetition.collectionDate.toISOString().split('T')[0] : '');
-        setEditResponsible(currentPetition.responsible || '');
-        setEditSignatureGoal(currentPetition.signatureGoal ? String(currentPetition.signatureGoal) : '');
+        const settingsDraft = getFormDraft<PetitionSettingsDraft>(getPetitionDraftKey(currentPetition.id, 'settings'));
+        setEditName(settingsDraft?.editName ?? currentPetition.name);
+        setEditDescription(settingsDraft?.editDescription ?? currentPetition.description ?? '');
+        setEditLocation(settingsDraft?.editLocation ?? currentPetition.location ?? '');
+        setEditCollectionDate(
+          settingsDraft?.editCollectionDate ??
+            (currentPetition.collectionDate ? currentPetition.collectionDate.toISOString().split('T')[0] : '')
+        );
+        setEditResponsible(settingsDraft?.editResponsible ?? currentPetition.responsible ?? '');
+        setEditSignatureGoal(
+          settingsDraft?.editSignatureGoal ?? (currentPetition.signatureGoal ? String(currentPetition.signatureGoal) : '')
+        );
         setEditSignatureGoalError('');
-        setEditImageUrl(currentPetition.imageUrl);
-        setImagePreview(currentPetition.imageUrl);
+        setEditImageUrl(settingsDraft?.editImageUrl ?? currentPetition.imageUrl);
+        setEditImageFile(settingsDraft?.editImageFile ?? null);
+        setImagePreview(settingsDraft?.imagePreview ?? currentPetition.imageUrl);
+        setIsEditing(settingsDraft?.isEditing ?? false);
         
         const petitionSignatures = await getSignaturesByPetition(currentPetition.id);
         setSignatures(petitionSignatures);
@@ -194,6 +266,55 @@ export const PetitionDetail: React.FC = () => {
 
     loadData();
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    setFormDraft<NewSignatureDraft>(getPetitionDraftKey(id, 'signature'), {
+      showAddSignature,
+      newSignature,
+      addressInput,
+    });
+  }, [id, showAddSignature, newSignature, addressInput]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    setFormDraft<ResourceDraft>(getPetitionDraftKey(id, 'resources'), {
+      title: newResourceTitle,
+      url: newResourceUrl,
+      type: newResourceType,
+    });
+  }, [id, newResourceTitle, newResourceUrl, newResourceType]);
+
+  useEffect(() => {
+    if (!petition) return;
+
+    setFormDraft<PetitionSettingsDraft>(getPetitionDraftKey(petition.id, 'settings'), {
+      isEditing,
+      editName,
+      editDescription,
+      editLocation,
+      editCollectionDate,
+      editResponsible,
+      editSignatureGoal,
+      editImageUrl,
+      editImageFile,
+      imagePreview,
+    });
+  }, [
+    petition,
+    isEditing,
+    editName,
+    editDescription,
+    editLocation,
+    editCollectionDate,
+    editResponsible,
+    editSignatureGoal,
+    editImageUrl,
+    editImageFile,
+    imagePreview,
+  ]);
 
   const handleAddSignature = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,6 +374,7 @@ export const PetitionDetail: React.FC = () => {
         setAddressInput('');
         setSignatureErrors({});
         setShowAddSignature(false);
+        clearFormDraft(getPetitionDraftKey(petition.id, 'signature'));
       }
     } catch (error) {
       console.error('Error saving signature:', error);
@@ -494,7 +616,10 @@ export const PetitionDetail: React.FC = () => {
         showAvailabilityFeedback('success', 'Dados da campanha atualizados com sucesso.');
         setEditSignatureGoalError('');
         setEditImageFile(null);
+        setEditImageUrl(updatedPetition.imageUrl);
+        setImagePreview(updatedPetition.imageUrl);
         setIsEditing(false);
+        clearFormDraft(getPetitionDraftKey(petition.id, 'settings'));
       }
     } catch (error) {
       console.error('Error updating petition:', error);
@@ -1361,6 +1486,7 @@ export const PetitionDetail: React.FC = () => {
                   setNewResourceUrl('');
                   setNewResourceType('link');
                   setResourceError('');
+                  clearFormDraft(getPetitionDraftKey(petition.id, 'resources'));
                 } else {
                   setResourceError('Erro ao adicionar o link. Verifique se você tem permissão ou se a tabela existe no banco de dados.');
                 }
@@ -1471,7 +1597,14 @@ export const PetitionDetail: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Informações Básicas</h3>
               {canEditPetition ? (
                 <button
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={() => {
+                    if (isEditing) {
+                      resetPetitionSettingsForm();
+                      return;
+                    }
+
+                    setIsEditing(true);
+                  }}
                   className="flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <Edit3 size={16} />
@@ -1630,7 +1763,7 @@ export const PetitionDetail: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsEditing(false)}
+                    onClick={resetPetitionSettingsForm}
                     className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
                     Cancelar
@@ -2079,6 +2212,9 @@ export const PetitionDetail: React.FC = () => {
                       state: '',
                       zipCode: ''
                     });
+                    if (petition) {
+                      clearFormDraft(getPetitionDraftKey(petition.id, 'signature'));
+                    }
                   }}
                   className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
@@ -2252,6 +2388,7 @@ export const PetitionDetail: React.FC = () => {
                     onClick={() => {
                       setShowAddSignature(false);
                       setSignatureErrors({});
+                      setAddressInput('');
                       setNewSignature({
                         name: '',
                         phone: '',
@@ -2261,6 +2398,9 @@ export const PetitionDetail: React.FC = () => {
                         state: '',
                         zipCode: '',
                       });
+                      if (petition) {
+                        clearFormDraft(getPetitionDraftKey(petition.id, 'signature'));
+                      }
                     }}
                     className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
